@@ -51,7 +51,7 @@ a:hover{color:#bd3e00}
 @media(max-width:1150px){.mainnav{gap:0}.navbtn{padding:12px 10px;font-size:15px}.brandlogo{width:155px}.search{min-width:190px}.gridcards{grid-template-columns:repeat(2,minmax(0,1fr))}.reel{grid-auto-columns:298px}}
 @media(max-width:900px){.topbar .inner{height:auto;min-height:84px;flex-wrap:wrap;padding-top:12px;padding-bottom:12px;gap:12px}.mainnav{order:3;width:100%;justify-content:flex-start;overflow-x:auto;gap:6px;border-top:1px solid #d5e0e9;padding-top:9px}.navbtn{white-space:nowrap;flex:0 0 auto}.search{margin-left:auto;max-width:400px;min-width:180px}.memberlink{display:none}.hero{min-height:470px}.hero:before{background:linear-gradient(90deg,#152c52 0%,#152c52ee 45%,#152c52aa 100%)}.modbottom{grid-template-columns:1fr 300px;gap:18px}}
 @media(max-width:740px){.shell{padding:0 18px}.topbar .inner{padding-top:12px;padding-bottom:12px;gap:11px}.brand{flex:0 1 auto}.brandlogo{width:153px}.brandname span{font-size:15px}.search{max-width:none;min-width:0;flex:1;height:52px}.search input{font-size:16px}.mainnav{margin:0;order:3;gap:8px;padding-top:10px}.navbtn{font-size:16px;padding:11px 13px;min-height:46px}.conceptbar .shell{font-size:13px;line-height:1.4}.hero{min-height:490px}.heroimg{opacity:.42}.hero:before{background:linear-gradient(0deg,#152c52 0%,#152c52f5 34%,#152c52aa 100%)}.hero .shell{padding-top:40px;padding-bottom:42px}.hero h1{font-size:clamp(40px,9vw,53px);letter-spacing:-.8px}.hero p{font-size:18px;line-height:1.56}.hero .tiny{font-size:14px}.chooser{padding:22px;margin-top:-17px}.section{margin-top:37px}.sectionhead h2{font-size:25px}.sectionhead p{font-size:15px}.sectionlink{font-size:15px}.chips{gap:9px}.chip{font-size:16px;padding:11px 15px}.reel{grid-auto-columns:84%;gap:14px}.card-title{font-size:20px;min-height:0}.cardline{font-size:16px}.gridcards{grid-template-columns:1fr;gap:23px}.shorts{max-height:unset;display:flex;flex-direction:column;overflow:visible}.shortcard{min-height:65vh}.shortcopy strong{font-size:21px}.shortcopy span{font-size:16px}.upsell{padding:25px}.upsell h2{font-size:28px}.upsell p{font-size:17px}.coursegrid{grid-template-columns:1fr}.modbottom{grid-template-columns:1fr;gap:18px}.modcontent{padding:23px}.modcontent h2{font-size:27px}.modcontent p{font-size:17px}.modal{max-height:95vh}.overlay{padding:9px}.player .missing{padding:20px}.player .missing h3{font-size:21px}.player .missing p{font-size:16px}.player .missing .primary{font-size:15px}.footer .shell{display:block}}
-@media(max-width:460px){.topbar .inner{display:grid;grid-template-columns:1fr auto;align-items:center}.brand{grid-column:1 / -1}.brandlogo{width:188px}.search{grid-column:1 / -1;width:100%;max-width:none;margin:0}.mainnav{grid-column:1 / -1;width:100%}.hero h1{font-size:40px}.reel{grid-auto-columns:87%}.hero-count{display:none}.sectionhead{align-items:start}.sectionhead .sectionlink{padding-top:3px}.modcontent{padding:20px}.modbottom{grid-template-columns:1fr}.player{min-height:235px}.player iframe{position:absolute;inset:0}}
+@media(max-width:460px){.topbar .inner{display:grid;grid-template-columns:1fr auto;align-items:center}.brand{grid-column:1 / -1}.brandlogo{width:188px}.search{grid-column:1 / -1;width:100%;max-width:none;margin:0}.mainnav{grid-column:1 / -1;width:100%}.hero h1{font-size:40px}.reel{grid-auto-columns:87%}.hero-count{display:none}.sectionhead{align-items:start}.sectionhead .sectionlink{padding-top:3px}.modcontent{padding:20px}.modbottom{grid-template-columns:1fr}.player{min-height:0}.player iframe{position:absolute;inset:0}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.poster img,.play{transition:none}}
 
 /* V3: always-visible, standalone thumbnail covers and click-to-play */
@@ -63,205 +63,237 @@ a:hover{color:#bd3e00}
 .player-cover{filter:none!important}
 .player .missing{background:#152c52e8;border-radius:13px}
 
-/* WATCH mobile modal repair (2026-10-31).
-   The previous min-height:235px on a 16:9 .player implied a minimum
-   width of 418px, wider than the actual phone modal. That forced
-   horizontal scrolling and clipped video/text. */
-@media (max-width: 740px) {
-  .overlay.open {
-    padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
-  }
-  .modal {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    max-height: calc(100vh - 16px); /* fallback for older mobile browsers */
-    max-height: calc(100dvh - 16px);
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-  }
-  #modal-body, .modcontent, .modbottom, .modbottom > * {
-    min-width: 0;
-    max-width: 100%;
-  }
-  .player {
-    width: 100%;
-    min-width: 0;
-    min-height: 0; /* overrides the 235px mobile minimum */
-    max-width: 100%;
-    max-height: none;
-    height: auto;
-    aspect-ratio: 16 / 9;
-  }
-  .player iframe, .player > .player-cover {
-    position: absolute;
-    inset: 0;
-    display: block;
-    width: 100%;
-    height: 100%;
-    border: 0;
-  }
-  .modbottom { grid-template-columns: minmax(0, 1fr); }
-  .modcontent { overflow-wrap: anywhere; }
-  .gearpill { max-width: 100%; }
-  .gearpill .gear-name { min-width: 0; }
+
+/* WATCH V6 - unified modal layout. Replaces V4/V5 appended overrides. */
+#overlay.overlay {
+  padding: 22px;
+  overflow: hidden;
 }
-
-
-
-/* Salt Strong WATCH V5: title/author first, full-width video, separate close control.
-   Keep these overrides at the END of brand.css so they supersede old modal rules. */
-.overlay {
-  padding: 18px;
-}
-.modal {
-  width: min(1120px, 100%);
+#overlay .modal {
+  box-sizing: border-box;
+  width: min(1160px, 100%);
   max-width: 100%;
   min-width: 0;
-  max-height: calc(100vh - 36px);
-  max-height: calc(100dvh - 36px);
+  max-height: calc(100vh - 44px);
+  max-height: calc(100dvh - 44px);
+  background: #fff;
+  border: 0;
+  border-radius: 22px;
+  box-shadow: 0 24px 90px #0b234654;
+  position: relative;
   overflow-x: hidden;
   overflow-y: auto;
-  border-radius: 22px;
-  position: relative;
-  background: #fff;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 #modal-body {
   width: 100%;
   min-width: 0;
-}
-.watch-modal-header {
-  position: relative;
-  min-width: 0;
-  padding: 26px 96px 19px 28px;
-  background: #fff;
-}
-.watch-modal-title {
-  margin: 0 0 11px;
   max-width: 100%;
-  color: #152c52;
-  font-size: clamp(25px, 2.5vw, 33px);
-  letter-spacing: -.65px;
-  font-weight: 850;
-  line-height: 1.22;
-  overflow-wrap: break-word;
+  margin: 0;
+  padding: 0;
 }
-.watch-modal-byline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  column-gap: 10px;
-  row-gap: 4px;
-  color: #465e77;
-  font-size: 17px;
-  line-height: 1.4;
-}
-.watch-byline-author { color: #152c52; font-weight: 800; }
-.watch-byline-sep { color: #8295a9; }
-.modal > .close {
-  position: absolute;
-  top: 20px;
-  right: 22px;
-  width: 54px;
-  height: 54px;
-  z-index: 10;
-  border: 2px solid #a0b6c7;
-  border-radius: 50%;
-  background: white;
-  color: #152c52;
-  font-size: 32px;
-  line-height: 1;
-  display: grid;
-  place-items: center;
-  box-shadow: none;
-}
-.modal > .close:hover,
-.modal > .close:focus-visible { background: #e6f0f8; }
-.watch-video-region {
-  padding: 0 22px;
+#modal-body > .watch-modal-header {
+  box-sizing: border-box;
+  display: block;
   width: 100%;
   min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 27px 94px 22px 28px;
+  background: white;
 }
-.watch-video-region .player {
+#modal-body .watch-modal-title {
+  display: block;
+  margin: 0 0 11px 0;
+  padding: 0;
+  font-family: var(--head);
+  color: #152c52;
+  font-size: clamp(26px, 2.55vw, 34px);
+  font-weight: 850;
+  letter-spacing: -.6px;
+  line-height: 1.24;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+#modal-body .watch-modal-byline {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: center;
+  gap: 4px 9px;
+  margin: 0;
+  padding: 0;
+  font-size: 17px;
+  line-height: 1.5;
+  color: #4c637a;
+}
+#modal-body .watch-byline-author {
+  font-weight: 800;
+  color: #152c52;
+}
+#modal-body .watch-byline-sep {
+  color: #8396a9;
+}
+#overlay .modal > #close {
+  position: absolute;
+  z-index: 12;
+  top: 24px;
+  right: 24px;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  min-height: 52px;
+  padding: 0 0 3px;
+  background: #fff;
+  border: 2px solid #9bb2c6;
+  border-radius: 50%;
+  box-shadow: none;
+  color: #152c52;
+  font-family: Arial, sans-serif;
+  font-size: 31px;
+  font-weight: 400;
+  line-height: 1;
+}
+#overlay .modal > #close:hover {
+  background: #e8f1f8;
+}
+#modal-body > .watch-video-region {
+  box-sizing: border-box;
+  display: block;
+  margin: 0;
+  padding: 0 24px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+#modal-body .watch-video-region > .player {
+  box-sizing: border-box;
   display: block;
   position: relative;
   width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 0;
-  max-height: none;
   height: auto;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: none;
   aspect-ratio: 16 / 9;
-  border-radius: 13px;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
+  border-radius: 12px;
   background: #152c52;
 }
-.watch-video-region .player iframe,
-.watch-video-region .player > .player-cover {
+#modal-body .watch-video-region .player > iframe,
+#modal-body .watch-video-region .player > img.player-cover {
   display: block;
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  max-width: 100%;
   border: 0;
   object-fit: cover;
 }
-/* Old title was within modcontent. The new one lives above the player. */
-.modcontent {
-  padding: 20px 28px 32px;
+#modal-body > .modcontent {
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 24px 28px 32px;
   overflow-wrap: break-word;
 }
-.modcontent > p:first-child {
-  margin-top: 0;
-  margin-bottom: 17px;
+#modal-body > .modcontent > p:first-child {
+  margin: 0 0 20px;
   color: #405a73;
   font-size: 18px;
-  line-height: 1.58;
+  line-height: 1.62;
 }
-.modcontent .metarow {
-  margin-bottom: 23px;
+#modal-body .modcontent .metarow {
+  margin: 0 0 25px;
+  gap: 9px;
 }
-.modbottom {
-  grid-template-columns: minmax(0, 1fr) minmax(270px, .8fr);
-  gap: 28px;
-  border-top: 1px solid #cfdae4;
-  padding-top: 20px;
+#modal-body .modbottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, .86fr);
+  gap: 30px;
+  padding-top: 24px;
   margin-top: 0;
+  border-top: 1px solid #cbd8e3;
 }
-.modbottom > * { min-width: 0; }
-.modbottom h3 { font-size: 22px; margin: 0 0 12px; }
-.modbottom p { margin-top: 0; }
+#modal-body .modbottom > * {
+  min-width: 0;
+  max-width: 100%;
+}
+#modal-body .modbottom h3 {
+  font-size: 21px;
+  font-weight: 800;
+  margin: 0 0 12px;
+}
+#modal-body .modbottom p { margin-top: 0; }
 
 @media (max-width: 740px) {
-  .overlay.open { padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)); }
-  .modal {
+  #overlay.overlay.open {
+    padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+  }
+  #overlay .modal {
     width: 100%;
     max-width: 100%;
     max-height: calc(100vh - 16px);
     max-height: calc(100dvh - 16px);
     border-radius: 18px;
   }
-  .watch-modal-header { padding: 20px 76px 15px 18px; }
-  .watch-modal-title { font-size: clamp(23px, 6vw, 28px); line-height: 1.25; margin-bottom: 10px; letter-spacing: -.35px; }
-  .watch-modal-byline { font-size: 15px; gap: 7px; }
-  .modal > .close { top: 15px; right: 14px; width: 49px; height: 49px; font-size: 29px; }
-  .watch-video-region { padding: 0 12px; }
-  .watch-video-region .player { width: 100%; min-height: 0; max-height: none; aspect-ratio: 16 / 9; border-radius: 11px; }
-  .modcontent { padding: 22px 18px 26px; }
-  .modcontent > p:first-child { font-size: 17px; line-height: 1.55; }
-  .modbottom { grid-template-columns: minmax(0, 1fr); gap: 22px; padding-top: 20px; }
-  .modbottom h3 { font-size: 20px; }
+  #modal-body > .watch-modal-header {
+    padding: 20px 72px 17px 18px;
+  }
+  #modal-body .watch-modal-title {
+    font-size: clamp(23px, 5.8vw, 29px);
+    line-height: 1.28;
+    letter-spacing: -.35px;
+    margin-bottom: 9px;
+  }
+  #modal-body .watch-modal-byline {
+    font-size: 15px;
+    gap: 4px 8px;
+  }
+  #overlay .modal > #close {
+    top: 15px;
+    right: 14px;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    font-size: 28px;
+  }
+  #modal-body > .watch-video-region { padding: 0 12px; }
+  #modal-body .watch-video-region > .player {
+    width: 100%;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+  }
+  #modal-body > .modcontent { padding: 22px 18px 26px; }
+  #modal-body > .modcontent > p:first-child { font-size: 17px; line-height: 1.58; }
+  #modal-body .modbottom { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  #modal-body .modbottom h3 { font-size: 20px; }
+  #modal-body .gearpill { max-width: 100%; }
+  #modal-body .gearpill .gear-name { min-width: 0; }
 }
 @media (max-width: 360px) {
-  .watch-modal-header { padding: 17px 69px 14px 15px; }
-  .watch-modal-title { font-size: 22px; }
-  .watch-modal-byline { font-size: 14px; }
-  .modal > .close { top: 12px; right: 10px; width: 45px; height: 45px; }
-  .watch-video-region { padding: 0 9px; }
-  .modcontent { padding: 18px 15px 24px; }
+  #modal-body > .watch-modal-header { padding: 18px 64px 15px 15px; }
+  #modal-body .watch-modal-title { font-size: 22px; }
+  #modal-body .watch-modal-byline { font-size: 14px; }
+  #overlay .modal > #close {
+    top: 12px;
+    right: 11px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  #modal-body > .watch-video-region { padding: 0 10px; }
+  #modal-body > .modcontent { padding: 20px 15px 25px; }
 }
