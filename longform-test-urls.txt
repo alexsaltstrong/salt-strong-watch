@@ -1,0 +1,7 @@
+# Salt Strong public long-form article test set, no admin/export needed.
+https://www.saltstrong.com/articles/saltwater-marsh-fishing-easy-way/
+https://www.saltstrong.com/articles/tide-fishing-mistakes/
+https://www.saltstrong.com/articles/matching-the-hatch-fall-inshore-fishing/
+https://www.saltstrong.com/articles/advanced-inshore-fishing-tips/
+https://www.saltstrong.com/articles/popping-cork-rigging-trick/
+https://www.saltstrong.com/articles/high-water-fishing/
