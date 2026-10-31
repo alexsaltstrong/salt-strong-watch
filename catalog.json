@@ -1,0 +1,330 @@
+{
+  "generated_at": "2026-10-31T16:05:05.180190+00:00",
+  "source": "public_article_import",
+  "demo": false,
+  "items": [
+    {
+      "id": "marshes",
+      "title": "EASIEST Way to Catch Fish in Saltwater Marshes",
+      "url": "https://www.saltstrong.com/articles/saltwater-marsh-fishing-easy-way/",
+      "image": "https://i.ytimg.com/vi/AB1AFtQK-mg/hqdefault.jpg",
+      "author": "Luke Simonds",
+      "date": "2026-10-22",
+      "excerpt": "Start with creek mouths, let current work for you, and find feeding redfish in the marsh.",
+      "tags": [
+        "Redfish",
+        "Flounder",
+        "Marshes",
+        "Structure",
+        "Artificial Lures"
+      ],
+      "search_text": "marsh creek mouths creek intersections redfish flounder black drum shoreline points current prawn shrimp oyster bars",
+      "gear": [
+        {
+          "name": "Prawn XT Jr. (3.5\")",
+          "url": "https://fishstrong.com/products/fish-strong-prawn-xt-junior-lure"
+        },
+        {
+          "name": "Hoss Weedless Jighead",
+          "url": "https://fishstrong.com/products/hoss-weedless-round-eye-jighead?variant=45861200363694"
+        },
+        {
+          "name": "Slam Stick Traveler",
+          "url": "https://fishstrong.com/products/slam-stick-spinning-rod-travel?variant=47443076087982"
+        }
+      ],
+      "video": {
+        "provider": "youtube",
+        "id": "AB1AFtQK-mg"
+      },
+      "image_fallback": "https://www.saltstrong.com/wp-content/uploads/wp_FishtheseSpots.jpg",
+      "video_source": "public-html"
+    },
+    {
+      "id": "tides",
+      "title": "You're Probably Fishing the Tides WRONG (4 Common Mistakes)",
+      "url": "https://www.saltstrong.com/articles/tide-fishing-mistakes/",
+      "image": "https://i.ytimg.com/vi/3UWwram4wQs/hqdefault.jpg",
+      "author": "Pat Ogletree",
+      "date": "2026-10-21",
+      "excerpt": "Learn when fish move as the water changes and how to adjust instead of fishing the tide chart alone.",
+      "tags": [
+        "Tides",
+        "Structure",
+        "Redfish",
+        "Oyster Bars",
+        "Seatrout"
+      ],
+      "search_text": "tides tide charts oyster bars incoming outgoing slack water grass current redfish trout snook",
+      "gear": [],
+      "video": {
+        "provider": "youtube",
+        "id": "3UWwram4wQs"
+      },
+      "image_fallback": "https://i.ytimg.com/vi/EEvy3gPSVIU/hqdefault.jpg",
+      "video_source": "public-html"
+    },
+    {
+      "id": "match",
+      "title": "Why It's Important To Match The Hatch In The Fall",
+      "url": "https://www.saltstrong.com/articles/matching-the-hatch-fall-inshore-fishing/",
+      "image": "https://i.ytimg.com/vi/JNw0q4NcF8s/hqdefault.jpg",
+      "author": "Tony Acevedo",
+      "date": "2026-10-20",
+      "excerpt": "Match baitfish profile and lure presentation as the bite changes, with a full inshore slam to prove it.",
+      "tags": [
+        "Lures",
+        "Redfish",
+        "Seatrout",
+        "Snook",
+        "Fall Tactics"
+      ],
+      "search_text": "match the hatch mullet fall skinny lipper mulligan hardbait paddletail presentation redfish snook speckled trout",
+      "gear": [
+        {
+          "name": "Skinny Lipper",
+          "url": "https://fishstrong.com/products/skinny-lipper-jr?variant=46252632604846"
+        },
+        {
+          "name": "4\" Mulligan Paddletail",
+          "url": "https://fishstrong.com/products/the-mulligan?variant=46473682485422"
+        },
+        {
+          "name": "Slot Machine Medium",
+          "url": "https://fishstrong.com/products/slot-machine-custom-rod"
+        }
+      ],
+      "video": {
+        "provider": "youtube",
+        "id": "JNw0q4NcF8s"
+      },
+      "image_fallback": "https://www.saltstrong.com/wp-content/uploads/wp_matchhatchTony.jpg",
+      "video_source": "public-html"
+    },
+    {
+      "id": "fluoro",
+      "title": "Is Fluorocarbon a SCAM? Here's What My Tests Show",
+      "url": "https://www.saltstrong.com/articles/fluorocarbon-vs-mono-testing-results/",
+      "image": "https://i.ytimg.com/vi/IX_Ncshj70Y/hqdefault.jpg",
+      "author": "Luke Simonds",
+      "date": "2026-10-15",
+      "excerpt": "See the abrasion and knot tests that challenge common assumptions about fluorocarbon leader.",
+      "tags": [
+        "Gear Tests",
+        "Rigging",
+        "Leader Line"
+      ],
+      "search_text": "fluorocarbon monofilament mono abrasion knot strength visibility leader line testing experiment",
+      "gear": [
+        {
+          "name": "Monofilament Leader",
+          "url": "https://fishstrong.com/products/ande-premium-monofilament-leader"
+        },
+        {
+          "name": "Fluorocarbon Leader",
+          "url": "https://fishstrong.com/products/seaguar-blue-label-fluorocarbon"
+        }
+      ],
+      "video": {
+        "provider": "youtube",
+        "id": "IX_Ncshj70Y"
+      },
+      "image_fallback": "https://www.saltstrong.com/wp-content/uploads/wp_FluoroScam.jpg",
+      "video_source": "public-html"
+    },
+    {
+      "id": "details",
+      "title": "Advanced Inshore Fishing: Success Is In These 3 Details",
+      "url": "https://www.saltstrong.com/articles/advanced-inshore-fishing-tips/",
+      "image": "https://i.ytimg.com/vi/WhGy1xWr-0U/hqdefault.jpg",
+      "author": "Tony Acevedo",
+      "date": "2026-10-14",
+      "excerpt": "Three overlooked details that separate an average day from more bites around inshore structure.",
+      "tags": [
+        "Redfish",
+        "Snook",
+        "Structure",
+        "On The Water"
+      ],
+      "search_text": "advanced fishing tips redfish snook structure lure presentations small details",
+      "gear": [
+        {
+          "name": "5\" Mulligan Bomber",
+          "url": "https://fishstrong.com/products/the-mulligan-bomber-5?variant=45620411302062"
+        },
+        {
+          "name": "Hoss Helix Hook",
+          "url": "https://fishstrong.com/products/salt-strong-hoss-helix-hooks"
+        }
+      ],
+      "video": {
+        "provider": "youtube",
+        "id": "WhGy1xWr-0U"
+      },
+      "image_fallback": "https://www.saltstrong.com/wp-content/uploads/wp_3advancedTechs.jpg",
+      "video_source": "public-html"
+    },
+    {
+      "id": "cork",
+      "title": "How to Make Your Popping Cork Rig MORE Versatile",
+      "url": "https://www.saltstrong.com/articles/popping-cork-rigging-trick/",
+      "image": "https://i.ytimg.com/vi/vlVcy9f8hWY/hqdefault.jpg",
+      "author": "Pat Ogletree",
+      "date": "2026-10-13",
+      "excerpt": "Change leader lengths in seconds without cutting and retying your entire popping cork setup.",
+      "tags": [
+        "Rigging",
+        "Gear Tests",
+        "Seatrout",
+        "Redfish"
+      ],
+      "search_text": "popping cork rig leader length swap snap dr popper xt leader knot flounder redfish trout",
+      "gear": [
+        {
+          "name": "Dr. Popper XT",
+          "url": "https://fishstrong.com/products/dr-popper-xt"
+        }
+      ],
+      "video": {
+        "provider": "youtube",
+        "id": "vlVcy9f8hWY"
+      },
+      "image_fallback": "https://www.saltstrong.com/wp-content/uploads/wp_drpopperxt_hack.jpg",
+      "video_source": "public-html"
+    },
+    {
+      "id": "switch",
+      "title": "When To Switch From Plugs To Soft Plastic Jerk Lures",
+      "url": "https://www.saltstrong.com/articles/when-to-switch-from-plugs-to-soft-plastic-jerks/",
+      "image": "https://i.ytimg.com/vi/s86HQltcbdQ/hqdefault.jpg",
+      "author": "Luke Simonds",
+      "date": "2026-10-08",
+      "excerpt": "A lure change transformed a zero-bite spot into a quick inshore slam.",
+      "tags": [
+        "Lures",
+        "Redfish",
+        "Snook",
+        "On The Water"
+      ],
+      "search_text": "switch plugs hardbaits soft plastic jerk lures tweaker black ice weedless presentation",
+      "gear": [
+        {
+          "name": "Polk County Tweaker"
+        },
+        {
+          "name": "Hoss Helix Hook",
+          "url": "https://fishstrong.com/products/salt-strong-hoss-helix-hooks"
+        }
+      ],
+      "video": {
+        "provider": "youtube",
+        "id": "s86HQltcbdQ"
+      },
+      "image_fallback": "https://www.saltstrong.com/wp-content/uploads/tweaker-black-ice-redfish-pic-lure-change-post-fb.jpg",
+      "video_source": "public-html"
+    },
+    {
+      "id": "highwater",
+      "title": "How to Find Inshore Fish During High Water",
+      "url": "https://www.saltstrong.com/articles/high-water-fishing/",
+      "image": "https://i.ytimg.com/vi/mA5vI_Tj41s/hqdefault.jpg",
+      "author": "Tony Acevedo",
+      "date": "2026-10-07",
+      "excerpt": "When high water floods shoreline cover, here's how to adjust your search for feeding fish.",
+      "tags": [
+        "Redfish",
+        "Structure",
+        "Tides",
+        "On The Water"
+      ],
+      "search_text": "high water flooded shorelines grass mangroves trees creeks current redfish trout",
+      "gear": [
+        {
+          "name": "Hoss Helix Hook",
+          "url": "https://fishstrong.com/products/salt-strong-hoss-helix-hooks"
+        },
+        {
+          "name": "Slot Machine Medium",
+          "url": "https://fishstrong.com/products/slot-machine-custom-rod"
+        }
+      ],
+      "video": {
+        "provider": "youtube",
+        "id": "mA5vI_Tj41s"
+      },
+      "image_fallback": "https://www.saltstrong.com/wp-content/uploads/wp_highwatertactics.jpg",
+      "video_source": "public-html"
+    },
+    {
+      "id": "blacktest",
+      "title": "Is This the Most Overlooked Lure Color for Inshore Fishing?",
+      "url": "https://www.saltstrong.com/articles/black-lures-redfish-trout/",
+      "image": "https://i.ytimg.com/vi/dwwY3GQgRU4/hqdefault.jpg",
+      "author": "Pat Ogletree",
+      "date": "2026-10-06",
+      "excerpt": "Pat puts black lures to the test from a kayak and shares a simpler approach to choosing colors.",
+      "tags": [
+        "Gear Tests",
+        "Lures",
+        "Redfish",
+        "Seatrout"
+      ],
+      "search_text": "black ice lures dark colors kayak redfish trout plugs lure color experiment",
+      "gear": [
+        {
+          "name": "Black Ice Plugs"
+        }
+      ],
+      "video": {
+        "provider": "youtube",
+        "id": "dwwY3GQgRU4"
+      },
+      "image_fallback": "https://www.saltstrong.com/wp-content/uploads/Untitled-design-29-1.jpg",
+      "video_source": "public-html"
+    },
+    {
+      "id": "blackintro",
+      "title": "Introducing Black Ice: Our Newest Plug Color",
+      "url": "https://www.saltstrong.com/articles/dark-fishing-lures-black-ice/",
+      "image": "https://i.ytimg.com/vi/t-udf8F8XAw/hqdefault.jpg",
+      "author": "Luke Simonds",
+      "date": "2026-10-06",
+      "excerpt": "Meet the Black Ice lineup and see why a dark plug can earn a spot in the tackle box.",
+      "tags": [
+        "Lures",
+        "Gear Tests"
+      ],
+      "search_text": "black ice moonwalker wake mullet skinny lipper flea flicker hardbaits topwater dark lures",
+      "gear": [
+        {
+          "name": "Moonwalker",
+          "url": "https://fishstrong.com/products/moonwalker?variant=47862860153006"
+        },
+        {
+          "name": "Wake Mullet",
+          "url": "https://fishstrong.com/products/wake-mullet"
+        },
+        {
+          "name": "Skinny Lipper",
+          "url": "https://fishstrong.com/products/the-skinny-lipper?variant=47863051190446"
+        },
+        {
+          "name": "Flea Flicker",
+          "url": "https://fishstrong.com/products/flea-flicker?variant=47863058071726"
+        }
+      ],
+      "video": {
+        "provider": "youtube",
+        "id": "t-udf8F8XAw"
+      },
+      "image_fallback": "https://www.saltstrong.com/wp-content/uploads/wp_black-ice-plugs-intro_horizontal.jpg",
+      "video_source": "public-html"
+    }
+  ],
+  "stats": {
+    "total": 10,
+    "resolved": 10,
+    "unresolved": 0,
+    "new_video_ids": 10
+  }
+}
