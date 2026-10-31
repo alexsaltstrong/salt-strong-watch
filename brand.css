@@ -109,3 +109,159 @@ a:hover{color:#bd3e00}
   .gearpill .gear-name { min-width: 0; }
 }
 
+
+
+/* Salt Strong WATCH V5: title/author first, full-width video, separate close control.
+   Keep these overrides at the END of brand.css so they supersede old modal rules. */
+.overlay {
+  padding: 18px;
+}
+.modal {
+  width: min(1120px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  max-height: calc(100vh - 36px);
+  max-height: calc(100dvh - 36px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: 22px;
+  position: relative;
+  background: #fff;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+#modal-body {
+  width: 100%;
+  min-width: 0;
+}
+.watch-modal-header {
+  position: relative;
+  min-width: 0;
+  padding: 26px 96px 19px 28px;
+  background: #fff;
+}
+.watch-modal-title {
+  margin: 0 0 11px;
+  max-width: 100%;
+  color: #152c52;
+  font-size: clamp(25px, 2.5vw, 33px);
+  letter-spacing: -.65px;
+  font-weight: 850;
+  line-height: 1.22;
+  overflow-wrap: break-word;
+}
+.watch-modal-byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 4px;
+  color: #465e77;
+  font-size: 17px;
+  line-height: 1.4;
+}
+.watch-byline-author { color: #152c52; font-weight: 800; }
+.watch-byline-sep { color: #8295a9; }
+.modal > .close {
+  position: absolute;
+  top: 20px;
+  right: 22px;
+  width: 54px;
+  height: 54px;
+  z-index: 10;
+  border: 2px solid #a0b6c7;
+  border-radius: 50%;
+  background: white;
+  color: #152c52;
+  font-size: 32px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  box-shadow: none;
+}
+.modal > .close:hover,
+.modal > .close:focus-visible { background: #e6f0f8; }
+.watch-video-region {
+  padding: 0 22px;
+  width: 100%;
+  min-width: 0;
+}
+.watch-video-region .player {
+  display: block;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  max-height: none;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 13px;
+  overflow: hidden;
+  background: #152c52;
+}
+.watch-video-region .player iframe,
+.watch-video-region .player > .player-cover {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
+/* Old title was within modcontent. The new one lives above the player. */
+.modcontent {
+  padding: 20px 28px 32px;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+.modcontent > p:first-child {
+  margin-top: 0;
+  margin-bottom: 17px;
+  color: #405a73;
+  font-size: 18px;
+  line-height: 1.58;
+}
+.modcontent .metarow {
+  margin-bottom: 23px;
+}
+.modbottom {
+  grid-template-columns: minmax(0, 1fr) minmax(270px, .8fr);
+  gap: 28px;
+  border-top: 1px solid #cfdae4;
+  padding-top: 20px;
+  margin-top: 0;
+}
+.modbottom > * { min-width: 0; }
+.modbottom h3 { font-size: 22px; margin: 0 0 12px; }
+.modbottom p { margin-top: 0; }
+
+@media (max-width: 740px) {
+  .overlay.open { padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)); }
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    border-radius: 18px;
+  }
+  .watch-modal-header { padding: 20px 76px 15px 18px; }
+  .watch-modal-title { font-size: clamp(23px, 6vw, 28px); line-height: 1.25; margin-bottom: 10px; letter-spacing: -.35px; }
+  .watch-modal-byline { font-size: 15px; gap: 7px; }
+  .modal > .close { top: 15px; right: 14px; width: 49px; height: 49px; font-size: 29px; }
+  .watch-video-region { padding: 0 12px; }
+  .watch-video-region .player { width: 100%; min-height: 0; max-height: none; aspect-ratio: 16 / 9; border-radius: 11px; }
+  .modcontent { padding: 22px 18px 26px; }
+  .modcontent > p:first-child { font-size: 17px; line-height: 1.55; }
+  .modbottom { grid-template-columns: minmax(0, 1fr); gap: 22px; padding-top: 20px; }
+  .modbottom h3 { font-size: 20px; }
+}
+@media (max-width: 360px) {
+  .watch-modal-header { padding: 17px 69px 14px 15px; }
+  .watch-modal-title { font-size: 22px; }
+  .watch-modal-byline { font-size: 14px; }
+  .modal > .close { top: 12px; right: 10px; width: 45px; height: 45px; }
+  .watch-video-region { padding: 0 9px; }
+  .modcontent { padding: 18px 15px 24px; }
+}
