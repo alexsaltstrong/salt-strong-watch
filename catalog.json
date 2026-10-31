@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-31T16:05:05.180190+00:00",
+  "generated_at": "2026-10-31T16:24:23.713354+00:00",
   "source": "public_article_import",
   "demo": false,
   "items": [
@@ -325,6 +325,6 @@
     "total": 10,
     "resolved": 10,
     "unresolved": 0,
-    "new_video_ids": 10
+    "new_video_ids": 0
   }
 }
