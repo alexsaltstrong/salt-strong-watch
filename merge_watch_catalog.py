@@ -100,7 +100,10 @@ def merge(base, imported):
                 combined['date'] = prev.get('date', '')
             if not new.get('excerpt'):
                 combined['excerpt'] = prev.get('excerpt', '')
-            if not new.get('search_text'):
+            if not new.get('search_text') and not new.get('content_scope_version'):
+                # Backwards compatibility for older extractors that omitted text.
+                # Do NOT resurrect contaminated comment text from the old catalog
+                # when this import explicitly used clean article-only extraction.
                 combined['search_text'] = prev.get('search_text', '')
             if not new.get('image_fallback'):
                 combined['image_fallback'] = prev.get('image_fallback', '')

@@ -45,10 +45,30 @@
     }
     return url;
   };
-  const matches = (it) => {
-    const haystack = [it.title,it.author,it.excerpt,it.search_text,(it.tags||[]).join(' '),(it.search_terms||[]).join(' '),(it.suggested_tags||[]).join(' ')].join(' ').toLowerCase();
-    return (category === 'All' || publicTags(it).includes(category)) && query.trim().toLowerCase().split(/\s+/).every(t=>!t||haystack.includes(t));
+  // Search index contains ONLY the edited article body after a clean resync.
+  // Multiword queries prioritize real phrases instead of matching unrelated
+  // words scattered through a long article (e.g. "night" + "fishing").
+  const searchScore = (it) => {
+    const terms = query.trim().toLowerCase().replace(/\s+/g, ' ');
+    if(!terms) return 1;
+    const title = String(it.title || '').toLowerCase();
+    const tags = publicTags(it).join(' ').toLowerCase();
+    const summary = String(it.excerpt || '').toLowerCase();
+    const headings = String(it.content_headings || '').toLowerCase();
+    const keywords = (it.search_terms||[]).join(' ').toLowerCase();
+    const body = String(it.search_text || '').toLowerCase();
+    const fields = [[title,100],[tags,90],[headings,85],[summary,75],[keywords,65]];
+    for (const [text,score] of fields) if (text.includes(terms)) return score;
+    if (terms.includes(' ')) {
+      // A phrase mentioned once far down an article is probably incidental.
+      const count = body.split(terms).length - 1;
+      return count >= 2 || (count === 1 && body.indexOf(terms) < 900) ? 25 : 0;
+    }
+    // Single-term searches can still explore the complete article body.
+    return body.includes(terms) ? 10 : 0;
   };
+  const matches = (it) =>
+    (category === 'All' || publicTags(it).includes(category)) && searchScore(it) > 0;
   const sorted = (arr) => [...arr].sort((a,b) => String(b.date || '').localeCompare(String(a.date || '')));
   const tagsInCatalog = () => {
     const counts = new Map();
@@ -129,7 +149,7 @@
 
     </main>`;
   }
-  function browse(){const list=sorted(items.filter(matches));return `<main class="shell"><div class="browse-intro"><div class="eyebrow">Find the lesson you need</div><h1>${query?'Search results':'All fishing videos'}</h1><p>Filter by species, structure, conditions and tackle. Tags are generated from the articles, not just existing WordPress labels.</p></div><section class="section">${chipBar()}<div class="resultsbar"><span><strong>${list.length}</strong> video${list.length===1?'':'s'} found</span><span>Newest first</span></div>${list.length?`<div class="gridcards">${list.map(card).join('')}</div>`:`<div class="empty"><strong>No matches this time.</strong>Try a different search or category.<br><button class="btn light" data-reset="1">Clear search and filters</button></div>`}</section></main>`}
+  function browse(){const list=items.filter(matches).sort((a,b) => query.trim() ? (searchScore(b)-searchScore(a) || String(b.date||'').localeCompare(String(a.date||''))) : String(b.date||'').localeCompare(String(a.date||'')));return `<main class="shell"><div class="browse-intro"><div class="eyebrow">Find the lesson you need</div><h1>${query?'Search results':'All fishing videos'}</h1><p>Filter by species, structure, conditions and tackle. Tags are generated from the articles, not just existing WordPress labels.</p></div><section class="section">${chipBar()}<div class="resultsbar"><span><strong>${list.length}</strong> video${list.length===1?'':'s'} found</span><span>${query.trim()?'Best match':'Newest first'}</span></div>${list.length?`<div class="gridcards">${list.map(card).join('')}</div>`:`<div class="empty"><strong>No matches this time.</strong>Try a different search or category.<br><button class="btn light" data-reset="1">Clear search and filters</button></div>`}</section></main>`}
   function savedPage(){const list=sorted(items.filter(it=>saved.has(String(it.id))&&matches(it)));return `<main class="shell"><div class="browse-intro"><div class="eyebrow">Your fishing shortlist</div><h1>Saved videos</h1><p>Favorites are stored in this browser for the prototype. Cross-device WordPress account sync is a future integration.</p></div><section class="section">${chipBar()}<div class="resultsbar">${list.length} saved lesson${list.length===1?'':'s'}</div>${list.length?`<div class="gridcards">${list.map(card).join('')}</div>`:`<div class="empty"><strong>Nothing saved yet.</strong>Click the heart beside any video to keep it handy.<br><button class="btn light" data-view="browse">Find videos →</button></div>`}</section></main>`}
   function courses(){return `<main class="shell"><div class="browse-intro"><div class="eyebrow">Learn at your pace</div><h1>Salt Strong courses</h1><p>A discovery preview for existing premium courses. Actual Insider, VIP and purchase access will need the WordPress/Memberium integration.</p></div><section class="section"><div class="courses-list"><div class="course-card"><div class="eyebrow">Future course integration</div><h3>Structured fishing lessons</h3><p>Continue learning after watching a free fishing tip. Course recommendations will link to verified purchase pages.</p><a class="btn light" href="https://www.saltstrong.com/courses/" target="_blank" rel="noopener noreferrer">See current courses ↗</a></div><div class="course-card"><div class="eyebrow">Member-aware in the future</div><h3>Insider & VIP access</h3><p>WATCH will never grant course access based on a tag or a thumbnail. Current permissions will come from WordPress.</p><button class="btn light" data-view="browse">Explore public lessons →</button></div></div></section></main>`}
   function hydrateImages(root){

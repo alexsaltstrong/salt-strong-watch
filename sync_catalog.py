@@ -194,11 +194,86 @@ def extract_video(html, soup, raw_post_content=""):
 
     if not hits:
         # Some themes render the player outside `article` (but still on page).
-        page_text=html_lib.unescape(unquote(html)).replace('\\/','/')
+        # Last-resort markup can include user-submitted YouTube links inside
+        # comments. Never consider those comments to be author video embeds.
+        fallback_soup = BeautifulSoup(html, 'html.parser')
+        for selector in NON_ARTICLE_SELECTORS:
+            for noise in list(fallback_soup.select(selector)):
+                noise.decompose()
+        page_text=html_lib.unescape(unquote(str(fallback_soup))).replace('\\/','/')
         for value in extract_youtube_shortcode_ids(page_text):
             if re.fullmatch(r'[A-Za-z0-9_-]{11}',value):add('youtube',value)
         for item in extract_video_candidates(page_text):add(item['provider'],item['id'])
     return hits
+
+
+
+# Text used for WATCH search/tags MUST come from the authored article, never
+# comments, related posts, navigation, forms, or site-wide widgets. Keep this
+# separate from the unmodified soup used to extract video and Featured Gear.
+ARTICLE_TEXT_SELECTORS = (
+    '.entry-content', '.article-content', '.post-content',
+    '.single-article-content', '.elementor-widget-theme-post-content',
+    'article .content', 'article', 'main'
+)
+NON_ARTICLE_SELECTORS = (
+    '#comments', '#respond', '#wpdcom', '#disqus_thread',
+    '.comments', '.comments-area', '.comment-list', '.commentlist',
+    '.comment-body', '.comment-content', '.comment-respond',
+    '.comment-form', '.comment-reply', '.comment-thread',
+    '[id^="comment-"]', '[id^="wpd-"]',
+    '.wpdiscuz', '.wpd-comment', '.wpd-comment-wrap', '.wpd-comment-item',
+    '.wpd-comments', '.wpd-thread-list', '.wpd-thread',
+    '.wpd-form', '.wpd-reply', '.wpd-comment-text',
+    '.related-posts', '.related-articles', '.yarpp-related',
+    '.jp-relatedposts', '.post-navigation', '.sharedaddy',
+    '.sidebar', '.widget', 'aside', 'footer', 'nav', 'form',
+    'script', 'style', 'noscript', 'template'
+)
+AFTER_ARTICLE_HEADING = re.compile(
+    r'^(?:(?:\d+\s+)?comments?(?:\s*\(\d+\))?|reader comments?|'
+    r'leave a (?:reply|comment)|join the (?:discussion|conversation)|'
+    r'related (?:posts|articles|fishing tips)|more (?:fishing tips|from salt strong))$',
+    re.I
+)
+
+
+def authored_article_text(soup):
+    """Return article-only text/headings, without mutating the source soup.
+
+    WordPress comments normally live outside `.entry-content`, but several
+    Salt Strong layouts can put them inside a broader `article`/`main` wrapper.
+    Clone the best content node and remove discussion/related-content blocks.
+    """
+    node = None
+    selector_used = 'body-fallback'
+    for selector in ARTICLE_TEXT_SELECTORS:
+        node = soup.select_one(selector)
+        if node is not None:
+            selector_used = selector
+            break
+    if node is None:
+        node = soup.body or soup
+    clean = BeautifulSoup(str(node), 'html.parser')
+    for selector in NON_ARTICLE_SELECTORS:
+        for noise in list(clean.select(selector)):
+            noise.decompose()
+    # Guard against templates without recognizable comment CSS selectors.
+    # The comment heading and subsequent content are NOT published post text.
+    for heading in list(clean.find_all(re.compile(r'^h[1-6]$'))):
+        if heading.parent and AFTER_ARTICLE_HEADING.fullmatch(
+            clip(heading.get_text(' ', strip=True), 90).rstrip(':')
+        ):
+            for sibling in list(heading.next_siblings):
+                if getattr(sibling, 'decompose', None):
+                    sibling.decompose()
+                else:
+                    sibling.extract()
+            heading.decompose()
+    headings = ' '.join(h.get_text(' ', strip=True)
+                        for h in clean.select('h2,h3,h4')[:30])
+    text = clip(clean.get_text(' ', strip=True), 16000)
+    return text, clip(headings, 2500), selector_used
 
 
 def get_author(soup):
@@ -296,9 +371,7 @@ def parse_article(url, content, raw_post_content=""):
     if not image:
         first=soup.select_one("article img, main img")
         if first:image=first.get("src","")
-    main=soup.select_one(".entry-content, .article-content, .post-content, article .content, article, main") or soup.body or soup
-    main_text=clip(main.get_text(" ",strip=True),16000)
-    content_headings=" ".join(h.get_text(" ",strip=True) for h in main.select("h2,h3,h4")[:30])
+    main_text, content_headings, body_selector = authored_article_text(soup)
     date=meta(soup,"article:published_time")[:10]
     if not date:
         tm=soup.find("time",datetime=True)
@@ -318,7 +391,8 @@ def parse_article(url, content, raw_post_content=""):
         "title":title,"url":url,"image":image,"image_fallback":original_image,
         "author":get_author(soup),"date":date,"excerpt":description or clip(main_text,240),
         "tags":classify(title,description,main_text),"search_text":main_text[:12000],
-        "content_headings":clip(content_headings,2500),
+        "content_headings":content_headings,
+        "content_scope_version":"article-body-only-v1", "content_selector":body_selector,
         "gear":extract_gear(soup),"video":videos[0],
         "video_count":len(videos),"needs_review":len(videos)>1, "video_source":"wordpress_shortcode_or_rendered_player",
     },None
