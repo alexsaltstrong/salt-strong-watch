@@ -1,0 +1,10 @@
+__pycache__/
+.pytest_cache/
+.venv/
+_site/
+last100-*.json
+last100-*.md
+merge-audit.json
+merge-summary.md
+catalog-before.json
+watch-tag-suggestions.json

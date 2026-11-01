@@ -213,21 +213,37 @@ def get_author(soup):
 
 
 def extract_gear(soup):
-    heading = None
-    for h in soup.find_all(re.compile("^h[1-6]$")):
-        if re.search(r"featured gear", h.get_text(" ",strip=True), re.I):
-            heading = h; break
-    if not heading: return []
-    result=[]
-    for sib in heading.next_siblings:
-        if getattr(sib, "name", None) and re.fullmatch("h[1-6]",sib.name): break
-        if not hasattr(sib, "find_all"): continue
-        for a in sib.find_all("a", href=True):
-            link=urljoin(BASE,a.get("href", ""));name=clip(a.get_text(" ",strip=True),100)
-            if name and link.startswith("https://") and ("fishstrong.com" in urlparse(link).hostname or "saltstrong.com" in urlparse(link).hostname):
-                if name not in [g["name"] for g in result]: result.append({"name": name, "url": link})
-                if len(result)>=6:return result
-    return result
+    """Collect real product links from article content; do not fabricate links.
+
+    Keep article order and URLs (including existing tracking redirects). Exclude
+    nav/footer/sidebar, unrelated articles, and broad shop homepages.
+    """
+    node = content_node(soup)
+    results=[]
+    seen=set()
+    for a in node.select('a[href]'):
+        href=urljoin(BASE,a.get('href',''))
+        p=urlparse(href)
+        host=(p.hostname or '').lower()
+        path=p.path.lower()
+        if not (host in ('fishstrong.com','www.fishstrong.com') or
+                (host in ('www.saltstrong.com','saltstrong.com') and ('shopify-sso' in path or '/shop/' in path))):
+            continue
+        if host.endswith('fishstrong.com') and not (path.startswith('/products/') or path.startswith('/collections/') or path.startswith('/pages/')):
+            continue
+        # Skip generic nav links/empty or duplicate buttons.
+        img=a.find('img')
+        label=clip(a.get_text(' ',strip=True) or a.get('title','') or (img.get('alt','') if img else ''),115)
+        if not label or label.lower() in ('shop now','buy now','click here','get yours','learn more','view product'):
+            # Prefer product slug over a meaningless button label.
+            slug=(path.split('/products/')[-1] if '/products/' in path else '').split('/')[0].replace('-',' ')
+            label=slug.title() if slug else 'Featured gear'
+        key=href.split('#')[0]
+        if key not in seen:
+            seen.add(key)
+            results.append({'name':label,'url':href})
+        if len(results)>=12: break
+    return results
 
 
 def classify(title, description, main_text):
@@ -249,7 +265,8 @@ def parse_article(url, content, raw_post_content=""):
         first=soup.select_one("article img, main img")
         if first:image=first.get("src","")
     main=soup.select_one(".entry-content, .article-content, .post-content, article .content, article, main") or soup.body or soup
-    main_text=clip(main.get_text(" ",strip=True),5000)
+    main_text=clip(main.get_text(" ",strip=True),16000)
+    content_headings=" ".join(h.get_text(" ",strip=True) for h in main.select("h2,h3,h4")[:30])
     date=meta(soup,"article:published_time")[:10]
     if not date:
         tm=soup.find("time",datetime=True)
@@ -268,7 +285,8 @@ def parse_article(url, content, raw_post_content=""):
         "id":urlparse(url).path.strip("/").split("/")[-1],
         "title":title,"url":url,"image":image,"image_fallback":original_image,
         "author":get_author(soup),"date":date,"excerpt":description or clip(main_text,240),
-        "tags":classify(title,description,main_text),"search_text":main_text[:3500],
+        "tags":classify(title,description,main_text),"search_text":main_text[:12000],
+        "content_headings":clip(content_headings,2500),
         "gear":extract_gear(soup),"video":videos[0],
         "video_count":len(videos),"needs_review":len(videos)>1, "video_source":"wordpress_shortcode_or_rendered_player",
     },None

@@ -1,0 +1,9 @@
+Salt Strong WATCH VNext QA summary
+=================================
+- 6 Python tests passed (shortcode, player parsing, product links, tagging, safe merge, click markup and workflow separation).
+- JS syntax passes node --check.
+- Headless isolated UI tests pass desktop 1440px and mobile 390px/320px. No page overflow and 16:9 player fills popup.
+- Title click opens popup; Play creates iframe; close button closes dialog.
+- 10 known IDs are included as a fallback sample. Your *existing* catalog.json is NOT included or replaced.
+- GitHub Pages refresh of 100 articles not run in this environment. You must run workflow on GitHub to verify a full import and its generated tags.
+- YouTube thumbnails/media could not be fetched in browser QA due to network restrictions, so final live playback must be checked after deployment.

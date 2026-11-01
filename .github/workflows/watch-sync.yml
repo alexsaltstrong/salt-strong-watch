@@ -1,69 +1,159 @@
-name: Refresh and publish WATCH
+name: WATCH - deploy and optional article refresh
+
 on:
-  workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - 'populate_catalog.py'
-      - 'sync_catalog.py'
-      - 'catalog.sample.json'
       - 'index.html'
       - 'app.js'
-      - 'brand.css'
+      - 'styles.css'
+      - 'assets/**'
+      - 'catalog.json'
       - '.github/workflows/watch-sync.yml'
+  workflow_dispatch:
+    inputs:
+      refresh_catalog:
+        description: 'Import new/updated articles before deploying?'
+        type: boolean
+        required: true
+        default: true
+      scan_limit:
+        description: 'Newest public WordPress articles to scan'
+        type: choice
+        default: '100'
+        options:
+          - '25'
+          - '50'
+          - '100'
+          - '200'
   schedule:
-    - cron: '15 10 * * *'
+    # Once daily, UTC. Safe read-only WordPress crawl; no changes to posts.
+    - cron: '23 10 * * *'
+
 permissions:
   contents: write
   pages: write
   id-token: write
+
+concurrency:
+  group: salt-strong-watch-production-pages
+  cancel-in-progress: false
+
 jobs:
-  populate-and-deploy:
+  build-and-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 55
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.publish.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Check out existing committed catalog and site
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Restore previous published catalog if not yet committed
+        run: |
+          if [ -s catalog.json ]; then
+            echo 'Using permanent catalog.json from Git history'
+          else
+            echo 'catalog.json is missing. Attempting a one-time backup from current published site.'
+            curl --fail --location --retry 2 --max-time 45 \
+              'https://alexsaltstrong.github.io/salt-strong-watch/catalog.json' -o catalog.json
+          fi
+          python -c 'import json;d=json.load(open("catalog.json"));assert isinstance(d.get("items"),list) and d["items"],"Missing populated catalog";print("Existing records:",len(d["items"]))'
+
+
+      - name: Set up Python
+        if: github.event_name != 'push'
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install video importer
+
+      - name: Install extractor dependencies (refresh only)
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_catalog)
         run: |
-          python -m pip install requests beautifulsoup4 playwright
+          python -m pip install -r requirements.txt
           python -m playwright install --with-deps chromium
-      - name: Test shortcode extraction and catalog generation
-        run: python -m unittest -q test_longform_extractor test_populate_catalog
-      - name: Read the ten public articles
-        run: python populate_catalog.py --seed catalog.sample.json --output catalog.json --audit import-audit.json
-      - name: Upload import audit (even when incomplete)
-        if: always()
+
+      - name: Run catalog and tagging tests before importing
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_catalog)
+        run: python -m unittest discover -s tests -v
+
+      - name: Scan recent public Articles (YouTube only)
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_catalog)
+        env:
+          SCAN_LIMIT: ${{ inputs.scan_limit || '100' }}
+        run: |
+          python watch_last100.py --limit "$SCAN_LIMIT" \
+            --output last100-catalog.json --audit last100-audit.json --summary last100-summary.md
+
+      - name: Classify videos using article text
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_catalog)
+        run: |
+          python enrich_import.py --input last100-catalog.json \
+            --output last100-enriched.json --suggestions watch-tag-suggestions.json
+
+
+      - name: Merge without deleting older videos
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_catalog)
+        run: |
+          python merge_watch_catalog.py --current catalog.json \
+            --imported last100-enriched.json --backup catalog-before.json \
+            --audit merge-audit.json --summary merge-summary.md
+
+      - name: Upload import report and backup
+        if: always() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_catalog))
         uses: actions/upload-artifact@v4
         with:
-          name: watch-import-audit
-          path: import-audit.json
+          name: watch-refresh-audit-backup
+          path: |
+            catalog-before.json
+            last100-catalog.json
+            last100-enriched.json
+            last100-audit.json
+            last100-summary.md
+            merge-audit.json
+            merge-summary.md
+            watch-tag-suggestions.json
           if-no-files-found: warn
-      - name: Commit verified catalog for next run
+          retention-days: 30
+
+      - name: Show run summary
+        if: always()
+        run: |
+          if [ -f last100-summary.md ]; then cat last100-summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f merge-summary.md ]; then cat merge-summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f watch-tag-suggestions.json ]; then echo 'New tag candidates are in the audit artifact.' >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - name: Save refreshed catalog in Git history
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_catalog)
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add catalog.json
           if git diff --cached --quiet; then
-            echo 'Catalog unchanged'
+            echo 'No catalog change'
           else
-            git commit -m 'Refresh WATCH video catalog'
-            git push
+            git commit -m 'WATCH: merge recently published YouTube articles'
+            git push origin HEAD:main
           fi
-      - name: Build static site payload
+
+      - name: Validate catalog before deployment
         run: |
-          mkdir -p _site
-          cp index.html app.js brand.css seed.js salt-strong-logo.png thumbnail-fallback.svg catalog.sample.json catalog.json _site/
+          python -c 'import json;d=json.load(open("catalog.json"));assert d["items"];print("Deploying",len(d["items"]),"catalog records")'
+
+      - name: Create static site (never copy temporary import files)
+        run: |
+          mkdir -p _site/assets
+          cp index.html app.js styles.css catalog.json _site/
+          cp assets/salt-strong-logo.png assets/thumbnail-fallback.svg _site/assets/
           touch _site/.nojekyll
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - name: Publish GitHub Pages
+        id: publish
         uses: actions/deploy-pages@v4
