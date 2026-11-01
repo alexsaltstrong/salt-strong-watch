@@ -173,7 +173,7 @@
     }
     if(el.dataset.coach){category='All';query=el.dataset.coach;$('#search').value=query;switchView('browse');return;}
     if(el.hasAttribute('data-reset')){category='All';query='';$('#search').value='';switchView('browse');return;}
-    if(el.dataset.view){if(el.dataset.view==='courses'){window.location.assign('https://www.saltstrong.com/courses/');return;}if(el.dataset.view==='home'){category='All';query='';$('#search').value='';}switchView(el.dataset.view);return;}
+    if(el.dataset.view){if(el.dataset.view==='courses'){window.location.assign('https://www.saltstrong.com/courses/');return;}if(el.dataset.view==='home' || el.dataset.view==='saved'){category='All';query='';$('#search').value='';}switchView(el.dataset.view);return;}
   });
   $('#search').addEventListener('input',e=>{query=e.target.value;category='All';view='browse';render();});
   let heroTouchX=null;document.addEventListener('touchstart',e=>{if(e.target.closest('#featured-hero'))heroTouchX=e.changedTouches[0]?.screenX??null;},{passive:true});document.addEventListener('touchend',e=>{if(heroTouchX==null||!e.target.closest('#featured-hero'))return;const diff=(e.changedTouches[0]?.screenX??heroTouchX)-heroTouchX;heroTouchX=null;if(Math.abs(diff)>65){const n=Math.min(5,items.length);heroIndex=(heroIndex+(diff<0?1:-1)+n)%n;render();}},{passive:true});
