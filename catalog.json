@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-01T04:07:41.588849+00:00",
+  "generated_at": "2026-11-01T16:56:42.363617+00:00",
   "source": "wordpress_recent_articles_merged",
   "demo": false,
   "items": [
@@ -5839,10 +5839,10 @@
   ],
   "stats": {
     "total": 80,
-    "previous": 20,
+    "previous": 80,
     "imported": 80,
-    "added": 60,
-    "updated": 20,
+    "added": 0,
+    "updated": 80,
     "retained_not_in_recent_scan": 0,
     "recent_articles_scanned": 100,
     "recent_articles_skipped": 20
