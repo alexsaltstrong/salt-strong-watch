@@ -26,3 +26,9 @@
 #topic-spotlight{scroll-margin-top:85px;}
 #topic-spotlight .section{margin-top:28px;border-left:4px solid var(--orange);padding-left:14px;}
 @media(max-width:750px){.brand strong{top:3px}#topic-spotlight{scroll-margin-top:75px}#topic-spotlight .section{padding-left:9px}}
+
+/* WATCH: searchable topic directory. Keep active tag visible when collapsed. */
+.topic-search-label{display:flex;flex-wrap:wrap;align-items:center;gap:12px;font-size:14px;font-weight:700;color:#173157;margin-bottom:12px}
+.topic-search-label input{min-width:min(100%,260px);height:42px;border:1px solid #b7cbdb;border-radius:10px;padding:8px 13px;font:inherit;background:white;color:#152c52}
+.topic-search-label input:focus{outline:3px solid #ff8c58;outline-offset:2px}
+.topic-count{font-size:13px;color:#526980;margin:8px 0}

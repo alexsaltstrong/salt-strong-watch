@@ -80,6 +80,7 @@ def merge(base, imported):
     before_keys = set(current)
     added = updated = 0
     warnings = []
+    tag_changes=[]
     for row in imported['items']:
         if not valid_youtube(row):
             raise ValueError('Import contains non-YouTube or missing video ID: ' + str(row['url']))
@@ -91,7 +92,7 @@ def merge(base, imported):
             # Preserve identity for browser-stored hearts and deep link stability.
             combined['id'] = prev.get('id') or new.get('id')
             # Keep editorial/known-good recommendations if scraper found no gear.
-            if not new.get('gear') and prev.get('gear'):
+            if prev.get('gear') and len(new.get('gear') or []) < len(prev['gear']):
                 combined['gear'] = prev['gear']
             if not new.get('author') or new.get('author') == 'Salt Strong':
                 combined['author'] = prev.get('author') or new.get('author')
@@ -103,9 +104,21 @@ def merge(base, imported):
                 combined['search_text'] = prev.get('search_text', '')
             if not new.get('image_fallback'):
                 combined['image_fallback'] = prev.get('image_fallback', '')
-            # Merge AI/heuristic tags with existing hand-picked tags.
-            tags = list(dict.fromkeys([*prev.get('tags', []), *new.get('tags', [])]))
-            combined['tags'] = tags[:12]
+            # Never resurrect stale heuristic tags during an audited re-sync.
+            # Only explicitly marked manual tags survive a successful re-tag.
+            if new.get('tagging_version'):
+                manual=list(dict.fromkeys([*(prev.get('manual_tags') or []), *(new.get('manual_tags') or [])]))
+                combined['manual_tags']=manual
+                combined['tags']=list(dict.fromkeys([*(new.get('auto_tags') or new.get('tags') or []),*manual]))
+                combined['auto_tags']=new.get('auto_tags') or new.get('tags') or []
+                combined['tag_facets']=new.get('tag_facets') or {}
+                combined['tag_evidence']=new.get('tag_evidence') or {}
+            else:
+                combined['tags']=list(dict.fromkeys([*(prev.get('tags') or []),*(new.get('tags') or [])]))[:12]
+            if prev.get('tags',[]) != combined.get('tags',[]):
+                before=set(prev.get('tags') or [])
+                after=set(combined.get('tags') or [])
+                tag_changes.append({'url':row['url'],'removed':sorted(before-after),'added':sorted(after-before)})
             current[key] = combined
             updated += 1
         else:
@@ -128,7 +141,7 @@ def merge(base, imported):
     out = {'generated_at':dt.datetime.now(dt.timezone.utc).isoformat(),
            'source':'wordpress_recent_articles_merged', 'demo':False,
            'items':ordered,'stats':stats}
-    return out, {'stats':stats,'warnings':warnings}
+    return out, {'stats':stats,'warnings':warnings,'tag_changes':tag_changes}
 
 
 def atomic_json(path, obj):
@@ -168,6 +181,7 @@ def main():
              f'- Previous records retained: **{stats["retained_not_in_recent_scan"]}** (outside current scan)\n'
              f'- Total WATCH videos after merge: **{stats["total"]}**\n'
              f'- Base catalog source: {origin}\n\n'
+             f'- Existing records with changed tags: **{len(audit["tag_changes"])}** (see merge-audit.json)\n\n'
              'Earlier entries are preserved; no older videos are deleted by this operation.\n')
     Path(args.summary).write_text(summary,encoding='utf8')
     print(summary,flush=True)

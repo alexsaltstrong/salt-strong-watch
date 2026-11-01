@@ -5,7 +5,7 @@
   const validUrl = (u) => { try { const x = new URL(u); return ['https:','http:'].includes(x.protocol) ? x.href : ''; } catch { return ''; } };
   const yt = (v) => v?.provider === 'youtube' && /^[a-zA-Z0-9_-]{11}$/.test(v.id) ? v.id : '';
   const dateText = (s) => s && /^\d{4}-\d\d-\d\d$/.test(s) ? new Date(`${s}T12:00:00`).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-  let items = [], view = 'home', query = '', category = 'All', selected = null, focusBeforeModal = null, heroIndex = 0, showAllTopics = false, mobileMenuOpen = false, mobileSearchOpen = false;
+  let items = [], view = 'home', query = '', category = 'All', selected = null, focusBeforeModal = null, heroIndex = 0, showAllTopics = false, topicSearch = '', mobileMenuOpen = false, mobileSearchOpen = false;
   let saved = new Set(); try { saved = new Set(JSON.parse(localStorage.getItem('ss_watch_saved') || '[]').map(String)); } catch {}
   const builtinTopics = ['All','Redfish','Snook','Seatrout','Flounder','Tides','Oyster Bars','Marshes','Structure','Topwater','Paddletails','Rigging','Gear Tests'];
   // Always prefer the highest *real* YouTube artwork. Some missing maxres
@@ -37,15 +37,22 @@
   };
   const sorted = (arr) => [...arr].sort((a,b) => String(b.date || '').localeCompare(String(a.date || '')));
   const tagsInCatalog = () => {
-    const counts = new Map();items.forEach(it=>(it.tags||[]).forEach(t=>counts.set(t,(counts.get(t)||0)+1)));
-    const list = builtinTopics.filter(t=>t==='All'||counts.has(t));
-    [...counts].sort((a,b)=>b[1]-a[1]).forEach(([t])=>{if(!list.includes(t)&&list.length<27)list.push(t)});
-    return list;
+    const counts = new Map();
+    items.forEach(it => (it.tags || []).forEach(t => {if(t)counts.set(t,(counts.get(t)||0)+1)}));
+    const priorities=builtinTopics.filter(t => t === 'All' || counts.has(t));
+    const rest=[...counts].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([tag])=>tag);
+    return [...new Set([...priorities,...rest])];
   };
   function chipBar(){
-    const list = tagsInCatalog();
-    const shortList = showAllTopics ? list : list.slice(0,12);
-    return `<div class="topic-controls"><div class="chips" role="group" aria-label="Fishing topics">${shortList.map(t=>`<button type="button" class="chip ${category===t?'active':''}" data-tag="${esc(t)}" aria-pressed="${category===t}">${esc(t)}</button>`).join('')}</div>${list.length>12?`<button class="chip more-topics" type="button" data-more-topics aria-expanded="${showAllTopics}">${showAllTopics?'Show fewer':'More topics'} <span aria-hidden="true">${showAllTopics?'−':'+'}</span></button>`:''}</div>`;
+    const all=tagsInCatalog();
+    const visible=showAllTopics
+      ? all.filter(t=>t==='All'||t.toLowerCase().includes(topicSearch.trim().toLowerCase())).slice(0,80)
+      : all.slice(0,12);
+    // A filter reached from an in-video tag must NEVER become invisible.
+    if(category!=='All' && !visible.includes(category))visible.splice(1,0,category);
+    const hasMore=all.length>12;
+    const matches=all.filter(t=>t==='All'||t.toLowerCase().includes(topicSearch.trim().toLowerCase()));
+    return `<div class="topic-controls">${showAllTopics?`<label class="topic-search-label" for="topic-filter">Find a topic<input id="topic-filter" type="search" value="${esc(topicSearch)}" placeholder="Search all ${all.length-1} topics..." autocomplete="off"></label>`:''}<div class="chips" role="group" aria-label="Fishing topics">${visible.map(t=>`<button type="button" class="chip ${category===t?'active':''}" data-tag="${esc(t)}" aria-pressed="${category===t}">${esc(t)}</button>`).join('')}</div>${showAllTopics&&matches.length>80?`<p class="topic-count">${matches.length-80} more topics. Refine your search above.</p>`:''}${hasMore?`<button class="chip more-topics" type="button" data-more-topics aria-expanded="${showAllTopics}">${showAllTopics?'Show fewer':'More topics'} <span aria-hidden="true">${showAllTopics?'−':'+'}</span></button>`:''}</div>`;
   }
   function card(it){
     const yes=saved.has(String(it.id));
@@ -157,7 +164,7 @@
     if(el.hasAttribute('data-toggle-menu')){mobileMenuOpen=!mobileMenuOpen;render();return;}
     if(el.hasAttribute('data-hero')||el.hasAttribute('data-hero-index')){const n=Math.min(5,items.length);heroIndex=el.hasAttribute('data-hero-index')?Number(el.dataset.heroIndex):(heroIndex+(el.dataset.hero==='next'?1:-1)+n)%n;render();return;}
     if(el.dataset.related||el.dataset.collection){const target=el.dataset.related||el.dataset.collection;category=target;query='';$('#search').value='';switchView('browse');return;}
-    if(el.hasAttribute('data-more-topics')){showAllTopics=!showAllTopics;render();return;}
+    if(el.hasAttribute('data-more-topics')){showAllTopics=!showAllTopics;topicSearch='';render();return;}
     if(el.hasAttribute('data-scroll')){const x=document.getElementById(el.dataset.scroll);if(x)x.scrollBy({left:Number(el.dataset.dir)*Math.max(270,x.clientWidth*.83),behavior:'smooth'});return;}
     if(el.dataset.open){const it=items.find(x=>String(x.id)===el.dataset.open);if(it)openModal(it);return;}
     if(el.hasAttribute('data-close')){closeModal();return;}
@@ -174,6 +181,14 @@
     if(el.dataset.coach){category='All';query=el.dataset.coach;$('#search').value=query;switchView('browse');return;}
     if(el.hasAttribute('data-reset')){category='All';query='';$('#search').value='';switchView('browse');return;}
     if(el.dataset.view){if(el.dataset.view==='courses'){window.location.assign('https://www.saltstrong.com/courses/');return;}if(el.dataset.view==='home' || el.dataset.view==='saved'){category='All';query='';$('#search').value='';}switchView(el.dataset.view);return;}
+  });
+  document.addEventListener('input',e=>{
+    if(e.target.id!=='topic-filter')return;
+    const start=e.target.selectionStart;
+    topicSearch=e.target.value;
+    render();
+    const input=$('#topic-filter');
+    if(input){input.focus();input.setSelectionRange(start,start);}
   });
   $('#search').addEventListener('input',e=>{query=e.target.value;category='All';view='browse';render();});
   let heroTouchX=null;document.addEventListener('touchstart',e=>{if(e.target.closest('#featured-hero'))heroTouchX=e.changedTouches[0]?.screenX??null;},{passive:true});document.addEventListener('touchend',e=>{if(heroTouchX==null||!e.target.closest('#featured-hero'))return;const diff=(e.changedTouches[0]?.screenX??heroTouchX)-heroTouchX;heroTouchX=null;if(Math.abs(diff)>65){const n=Math.min(5,items.length);heroIndex=(heroIndex+(diff<0?1:-1)+n)%n;render();}},{passive:true});

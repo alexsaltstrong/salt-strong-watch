@@ -1,13 +1,16 @@
-"""Evidence-based WATCH taxonomy. Reads *article text*; never changes WP tags.
+"""Controlled WATCH content tagging. Never modifies WordPress tags.
 
-Rules are transparent and curated. Unknown phrases from repeated headings are surfaced
-as suggestions for review, rather than silently published as nonsensical tags.
+Automatic tags are *recomputed* on every successful import, not unioned with old
+heuristic labels. Explicit ``manual_tags`` are kept in a separate field.
+Unknown recurring phrases stay suggestions for human review.
 """
 from __future__ import annotations
-from collections import Counter, defaultdict
+from collections import defaultdict
 import re
 
-# family, display name, bounded patterns. Rules do NOT inspect WordPress tag names.
+TAG_VERSION = 'relevance-v2'
+
+# Curated labels; allow new labels only by editing/reviewing this taxonomy.
 TAG_RULES = [
  ('species','Redfish',[r'\bredfish\b',r'\bred drum\b']),
  ('species','Seatrout',[r'\bsea\s?trout\b',r'\bspeckled trout\b',r'\bspecks\b']),
@@ -66,62 +69,65 @@ TAG_RULES = [
  ('format','Experiments',[r'\bexperiments?\b',r'\bwe tested\b']),
 ]
 
-STOP_HEADINGS={'final thoughts','conclusion','summary','featured gear','in this video','watch next','related articles','faq','frequently asked questions','introduction','about the author','get more tips'}
-STOP_WORDS=set('the a an and or to for in on with from by at out of into what when where how why this that these those your you more most best using use ways way tips fishing fish catch catching video lesson guide learn important easy ultimate everything beginner easy'.split())
-
+STOP_WORDS=set('the a an and or to for in on with from by at out of into what when where how why this that these those your you more most best using use ways way tips fishing fish catch catching video lesson guide learn important easy ultimate everything beginner'.split())
 
 def normal(text):
     return re.sub(r'\s+',' ',str(text or '')).strip()
 
+def count_matches(patterns, text):
+    return sum(len(re.findall(p,text,re.I)) for p in patterns)
 
 def classify_item(item):
+    """Fewer, higher-signal tags. Never carry old auto-generated tags forward."""
     title=normal(item.get('title',''))
-    snippet=normal(item.get('excerpt',''))
-    article=normal(item.get('search_text',''))
+    summary=normal(item.get('excerpt',''))
     headings=normal(item.get('content_headings',''))
-    # Require meaning in title/summary/headings, or at least two body mentions.
-    priority=(title+' '+snippet+' '+headings).lower()
-    body=article.lower()
-    tags=[]; facets=defaultdict(list); evidence={}
+    article=normal(item.get('search_text',''))
+    candidates=[]
     for family,label,patterns in TAG_RULES:
-        p_hits=[re.search(p,priority,re.I) for p in patterns]
-        body_hits=sum(len(re.findall(p,body,re.I)) for p in patterns)
-        if any(p_hits) or body_hits >= 2:
-            tags.append(label)
-            facets[family].append(label)
-            evidence[label]={'source':'title/summary/headings' if any(p_hits) else 'article body','mentions':body_hits}
-    # Keep existing hand-curated tags for entries previously edited by the team,
-    # but use discovered labels first to improve filter browsing.
-    tags=list(dict.fromkeys(tags+(item.get('tags') or [])))[:18]
-    item=dict(item)
-    item['tags']=tags
-    item['tag_facets']=dict(facets)
-    item['tag_evidence']=evidence
-    return item
+        title_hits=count_matches(patterns,title)
+        heading_hits=count_matches(patterns,headings)
+        summary_hits=count_matches(patterns,summary)
+        body_hits=count_matches(patterns,article)
+        # A single incidental phrase in the body is not a topic. Strong main
+        # content evidence needs to come from the editorial title/heading, or
+        # independently from the summary AND the body, or repeated body mentions.
+        qualifies=(title_hits>0 or heading_hits>0 or
+                   (summary_hits>0 and body_hits>=1) or body_hits>=4)
+        # Night Fishing is often incidental to a general lure strategy. Only
+        # publish it when the video is *framed* as night fishing in its title,
+        # lesson headings, or summary with repeated treatment in the body.
+        if label=='Night Fishing':
+            qualifies=bool(title_hits or heading_hits or (summary_hits and body_hits>=3))
+        if not qualifies:continue
+        score=title_hits*7+heading_hits*5+summary_hits*2+min(body_hits,5)
+        candidates.append((score,label,family,{'title':title_hits,'headings':heading_hits,'summary':summary_hits,'body':body_hits}))
+    candidates.sort(key=lambda e:(-e[0],e[1]))
+    auto=[x[1] for x in candidates[:6]]
+    manual=[normal(t) for t in item.get('manual_tags',[]) if normal(t)]
+    tags=list(dict.fromkeys(auto+manual))
+    result=dict(item)
+    result['tags']=tags
+    result['auto_tags']=auto
+    result['tag_facets']={family:[x[1] for x in candidates[:6] if x[2]==family] for family in ['species','structure','conditions','techniques','tackle','format'] if any(x[2]==family for x in candidates[:6])}
+    result['tag_evidence']={label:evidence for _,label,_,evidence in candidates[:6]}
+    result['tagging_version']=TAG_VERSION
+    return result
 
-
-def phrase_suggestions(items, min_articles=2):
-    """Mine 2-3-word phrases from titles/headings across distinct articles.
-
-    Suggestions are *not* auto-published as tags. A future editorial or AI review
-    can promote them into TAG_RULES so discovery remains useful rather than noisy.
-    """
-    seen=defaultdict(set)
+def phrase_suggestions(items,min_articles=2):
+    """Discover candidates for review; never auto-create public topic chips."""
+    documents=defaultdict(set)
     for item in items:
-        text=normal(item.get('title','')+' '+item.get('content_headings',''))
-        words=re.findall(r'[a-z]{3,}',text.lower())
-        docid=item.get('url','')
+        words=re.findall(r'[a-z]{3,}',normal(item.get('title','')+' '+item.get('content_headings','')).lower())
         for n in (2,3):
             for i in range(len(words)-n+1):
                 chunk=words[i:i+n]
                 if any(w in STOP_WORDS for w in chunk) or len(set(chunk))!=n:continue
-                label=' '.join(chunk)
-                seen[label].add(docid)
+                documents[' '.join(chunk)].add(item.get('url',''))
     existing={label.lower() for _,label,_ in TAG_RULES}
-    ranked=[{'tag':p.title(),'articles':len(v)} for p,v in seen.items() if len(v)>=min_articles and p not in existing]
-    return sorted(ranked,key=lambda x:(-x['articles'],x['tag']))[:40]
-
+    proposals=[{'tag':phrase.title(),'articles':len(urls)} for phrase,urls in documents.items() if len(urls)>=min_articles and phrase not in existing]
+    return sorted(proposals,key=lambda x:(-x['articles'],x['tag']))[:40]
 
 def enrich(items):
-    updated=[classify_item(x) for x in items]
+    updated=[classify_item(i) for i in items]
     return updated,phrase_suggestions(updated)
