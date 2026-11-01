@@ -7,7 +7,21 @@
   const dateText = (s) => s && /^\d{4}-\d\d-\d\d$/.test(s) ? new Date(`${s}T12:00:00`).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
   let items = [], view = 'home', query = '', category = 'All', selected = null, focusBeforeModal = null, heroIndex = 0, showAllTopics = false, topicSearch = '', mobileMenuOpen = false, mobileSearchOpen = false;
   let saved = new Set(); try { saved = new Set(JSON.parse(localStorage.getItem('ss_watch_saved') || '[]').map(String)); } catch {}
-  const builtinTopics = ['All','Redfish','Snook','Seatrout','Flounder','Tides','Oyster Bars','Marshes','Structure','Topwater','Paddletails','Rigging','Gear Tests'];
+  // A deliberate, finite browse vocabulary. Search can still discover much
+  // more detailed phrases; only reviewed topics become public filter chips.
+  const builtinTopics = ['All','Redfish','Snook','Seatrout','Flounder','Tides','Oyster Bars','Marshes','Topwater','Lure Selection','Soft Plastics','Rigging','Gear Tests'];
+  const approvedTopics = new Set([
+    'Redfish','Seatrout','Snook','Flounder','Tarpon','Sheepshead','Mangrove Snapper','Black Drum',
+    'Oyster Bars','Marshes','Mangroves','Grass Flats','Docks','Bridges','Creek Mouths','Structure',
+    'Tides','High Water','Low Tide','Current','Wind','Cold Fronts','Fall Fishing','Night Fishing',
+    'Lure Selection','Topwater','Soft Plastics','Paddletails','Shrimp Lures','Popping Corks',
+    'Rigging','Sight Fishing','Live Bait','Weedless Lures','Jigheads',
+    'Leader Line','Fishing Rods','Hardbaits','Gear Tests','Experiments'
+  ]);
+  // Old machine-generated labels (e.g. Match The Hatch) don't appear as
+  // browse chips while awaiting a new resync. Explicit human tags are allowed.
+  const publicTags = it => [...new Set((it.tags || []).filter(t =>
+    approvedTopics.has(t) || (it.manual_tags || []).includes(t)))];
   // Always prefer the highest *real* YouTube artwork. Some missing maxres
   // URLs return a 120x90 placeholder with HTTP 200, so check naturalWidth.
   const image = (it) => {
@@ -32,13 +46,13 @@
     return url;
   };
   const matches = (it) => {
-    const haystack = [it.title,it.author,it.excerpt,it.search_text,(it.tags||[]).join(' '),(it.suggested_tags||[]).join(' ')].join(' ').toLowerCase();
-    return (category === 'All' || (it.tags||[]).includes(category)) && query.trim().toLowerCase().split(/\s+/).every(t=>!t||haystack.includes(t));
+    const haystack = [it.title,it.author,it.excerpt,it.search_text,(it.tags||[]).join(' '),(it.search_terms||[]).join(' '),(it.suggested_tags||[]).join(' ')].join(' ').toLowerCase();
+    return (category === 'All' || publicTags(it).includes(category)) && query.trim().toLowerCase().split(/\s+/).every(t=>!t||haystack.includes(t));
   };
   const sorted = (arr) => [...arr].sort((a,b) => String(b.date || '').localeCompare(String(a.date || '')));
   const tagsInCatalog = () => {
     const counts = new Map();
-    items.forEach(it => (it.tags || []).forEach(t => {if(t)counts.set(t,(counts.get(t)||0)+1)}));
+    items.forEach(it => publicTags(it).forEach(t => {if(t)counts.set(t,(counts.get(t)||0)+1)}));
     const priorities=builtinTopics.filter(t => t === 'All' || counts.has(t));
     const rest=[...counts].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([tag])=>tag);
     return [...new Set([...priorities,...rest])];
@@ -56,7 +70,7 @@
   }
   function card(it){
     const yes=saved.has(String(it.id));
-    return `<article class="video-card"><button type="button" class="poster" data-open="${esc(it.id)}" aria-label="Watch ${esc(it.title)}">${image(it)}<span class="play" aria-hidden="true">▶</span><span class="cardbadge">${esc((it.tags||[])[0]||'Fishing Tips')}</span></button><div class="card-body"><button type="button" class="card-title" data-open="${esc(it.id)}">${esc(it.title)}</button><div class="cardline"><span>${esc(it.author||'Salt Strong')}${dateText(it.date)?` · ${esc(dateText(it.date))}`:''}</span><button type="button" class="savebtn ${yes?'saved':''}" data-save="${esc(it.id)}" aria-label="${yes?'Remove saved':'Save'}: ${esc(it.title)}" aria-pressed="${yes}">${yes?'♥':'♡'}</button></div></div></article>`;
+    return `<article class="video-card"><button type="button" class="poster" data-open="${esc(it.id)}" aria-label="Watch ${esc(it.title)}">${image(it)}<span class="play" aria-hidden="true">▶</span><span class="cardbadge">${esc(publicTags(it)[0]||'Fishing Tips')}</span></button><div class="card-body"><button type="button" class="card-title" data-open="${esc(it.id)}">${esc(it.title)}</button><div class="cardline"><span>${esc(it.author||'Salt Strong')}${dateText(it.date)?` · ${esc(dateText(it.date))}`:''}</span><button type="button" class="savebtn ${yes?'saved':''}" data-save="${esc(it.id)}" aria-label="${yes?'Remove saved':'Save'}: ${esc(it.title)}" aria-pressed="${yes}">${yes?'♥':'♡'}</button></div></div></article>`;
   }
   function reel(title,subtitle,list){
     if(!list.length)return '';
@@ -72,7 +86,7 @@
       <div class="hero-image" aria-hidden="true">${image(it)}</div>
       <div class="hero-shade"></div>
       <div class="shell hero-content">
-        <div class="hero-copy"><div class="eyebrow">Latest lessons <span class="hero-mini-index">${heroIndex+1} / ${slides.length}</span></div><h1>${esc(it.title)}</h1><p>${esc(it.excerpt||'Real on-the-water tips to help you catch more fish.')}</p><div class="hero-actions"><button type="button" class="btn primary" data-open="${esc(it.id)}"><span aria-hidden="true">▶</span> Watch now</button><button type="button" class="btn ghost" data-related="${esc((it.tags||[])[0]||'All')}">More like this</button></div></div>
+        <div class="hero-copy"><div class="eyebrow">Latest lessons <span class="hero-mini-index">${heroIndex+1} / ${slides.length}</span></div><h1>${esc(it.title)}</h1><p>${esc(it.excerpt||'Real on-the-water tips to help you catch more fish.')}</p><div class="hero-actions"><button type="button" class="btn primary" data-open="${esc(it.id)}"><span aria-hidden="true">▶</span> Watch now</button><button type="button" class="btn ghost" data-related="${esc(publicTags(it)[0]||'All')}">More like this</button></div></div>
       </div>
       ${slides.length>1?`<button class="hero-arrow left" type="button" data-hero="prev" aria-label="Previous featured lesson">‹</button><button class="hero-arrow right" type="button" data-hero="next" aria-label="Next featured lesson">›</button><div class="hero-dots" role="group" aria-label="Featured lesson selection">${slides.map((_,i)=>`<button class="hero-dot ${i===heroIndex?'current':''}" type="button" data-hero-index="${i}" aria-label="Featured lesson ${i+1}" aria-pressed="${i===heroIndex}"></button>`).join('')}</div>`:''}
     </section>`;
@@ -91,12 +105,12 @@
       {title:'Fishing structure',tags:['Structure']},
     ];
     const available=definitions.map(def=>{
-      const matches=newest.filter(it=>(it.tags||[]).some(t=>def.tags.includes(t)));
+      const matches=newest.filter(it=>publicTags(it).some(t=>def.tags.includes(t)));
       return {...def,matches};
     }).filter(def=>def.matches.length);
     const cards=available.slice(0,4).map(def=>{
       const sample=def.matches[0];
-      const primaryTag=def.tags.find(t=>(sample.tags||[]).includes(t)) || def.tags[0];
+      const primaryTag=def.tags.find(t=>publicTags(sample).includes(t)) || def.tags[0];
       return `<button type="button" class="collection-card" data-collection="${esc(primaryTag)}" aria-label="Explore ${esc(def.title)} lessons">${image(sample)}<span class="collection-gradient" aria-hidden="true"></span><span class="collection-title">${esc(def.title)}</span><span class="collection-arrow" aria-hidden="true">→</span></button>`;
     });
     if(!cards.length)return '';
@@ -105,7 +119,7 @@
   function home(){
     const newest=sorted(items);
     if(!newest.length)return `<main class="shell"><div class="empty"><strong>No videos available yet.</strong>Import the newest public articles using GitHub Actions.</div></main>`;
-    const featuredTopic = category !== 'All' ? newest.filter(it => (it.tags || []).includes(category)) : [];
+    const featuredTopic = category !== 'All' ? newest.filter(it => publicTags(it).includes(category)) : [];
     return `${heroSection(newest)}<main class="shell">
       <section class="chooser" aria-label="Browse fishing topics"><div class="chooser-heading"><h2>What do you want to<br>master on the water?</h2><span class="orange-swoosh" aria-hidden="true"></span></div>${chipBar()}</section>
       ${category !== 'All' ? `<div id="topic-spotlight">${reel(`${category} lessons`, `Explore ${featuredTopic.length} lesson${featuredTopic.length === 1 ? '' : 's'} about ${category.toLowerCase()}.`, featuredTopic)}${featuredTopic.length === 0 ? '<div class="empty">No matching lessons in the current catalog.</div>' : ''}</div>` : ''}
@@ -153,7 +167,7 @@
   function openModal(it,saveFocus=true){
     if(saveFocus)focusBeforeModal=document.activeElement;selected=it;
     const gear=(it.gear||[]).filter(g=>g.name&&ssoGearUrl(g.url)).map(g=>`<a class="gearpill" href="${esc(ssoGearUrl(g.url))}" target="_blank" rel="noopener noreferrer"><span>${esc(g.name)}</span><span>Shop ↗</span></a>`).join('');
-    $('#modal-body').innerHTML=`<div class="modal-header"><div class="modal-heading"><h2 id="modal-title">${esc(it.title)}</h2><div class="byline"><strong>${esc(it.author||'Salt Strong')}</strong><span aria-hidden="true">·</span><span>${esc(dateText(it.date))}</span></div></div><button type="button" class="close" data-close aria-label="Close video">×</button></div><div class="player">${image(it)}${yt(it.video)?`<div class="preplay"><button type="button" class="btn primary modal-play" data-play="1">▶ Play video</button></div>`:`<div class="no-video"><p>Video player unavailable in this record.</p><a class="btn primary" href="${esc(validUrl(it.url))}" target="_blank" rel="noopener">Read original article ↗</a></div>`}</div><div class="modcontent"><p>${esc(it.excerpt||'')}</p><div class="metarow">${(it.tags||[]).slice(0,10).map(t=>`<button type="button" class="tag" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div><div class="modbottom"><div><h3>Keep learning</h3><p>Read the full Salt Strong article for written details, comments and additional resources.</p><div class="modlinks"><a class="btn light" href="${esc(validUrl(it.url))}" target="_blank" rel="noopener noreferrer">Read full article ↗</a><button type="button" class="btn light" data-save="${esc(it.id)}">${saved.has(String(it.id))?'♥ Saved':'♡ Save for later'}</button></div></div><div><h3>Featured gear</h3>${gear||'<p>For tackle recommendations, see the full article.</p>'}</div></div></div>`;
+    $('#modal-body').innerHTML=`<div class="modal-header"><div class="modal-heading"><h2 id="modal-title">${esc(it.title)}</h2><div class="byline"><strong>${esc(it.author||'Salt Strong')}</strong><span aria-hidden="true">·</span><span>${esc(dateText(it.date))}</span></div></div><button type="button" class="close" data-close aria-label="Close video">×</button></div><div class="player">${image(it)}${yt(it.video)?`<div class="preplay"><button type="button" class="btn primary modal-play" data-play="1">▶ Play video</button></div>`:`<div class="no-video"><p>Video player unavailable in this record.</p><a class="btn primary" href="${esc(validUrl(it.url))}" target="_blank" rel="noopener">Read original article ↗</a></div>`}</div><div class="modcontent"><p>${esc(it.excerpt||'')}</p><div class="metarow">${publicTags(it).slice(0,8).map(t=>`<button type="button" class="tag" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div><div class="modbottom"><div><h3>Keep learning</h3><p>Read the full Salt Strong article for written details, comments and additional resources.</p><div class="modlinks"><a class="btn light" href="${esc(validUrl(it.url))}" target="_blank" rel="noopener noreferrer">Read full article ↗</a><button type="button" class="btn light" data-save="${esc(it.id)}">${saved.has(String(it.id))?'♥ Saved':'♡ Save for later'}</button></div></div><div><h3>Featured gear</h3>${gear||'<p>For tackle recommendations, see the full article.</p>'}</div></div></div>`;
     const overlay=$('#overlay');overlay.classList.add('open');overlay.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';hydrateImages($('#modal-body'));$('#modal-body .close').focus();
   }
   function closeModal(){const overlay=$('#overlay');if(!overlay.classList.contains('open'))return;overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true');$('#modal-body').replaceChildren();selected=null;document.body.style.overflow='';focusBeforeModal?.focus?.();}
