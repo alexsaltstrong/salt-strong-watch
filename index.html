@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#152c52">
-  <meta name="description" content="Browse and watch Salt Strong inshore fishing videos. Find lessons by species, structure, conditions, technique and tackle.">
-  <title>Salt Strong WATCH | Find your next fishing lesson</title>
+  <meta name="theme-color" content="#071e3d">
+  <meta name="description" content="Discover real Salt Strong inshore fishing lessons by species, tides, structure, techniques and tackle. Watch, save and learn.">
+  <title>Salt Strong WATCH | Fishing lessons worth watching</title>
   <link rel="preconnect" href="https://i.ytimg.com" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=next-1">
+  <link rel="stylesheet" href="styles.css?v=design-approved-2">
 </head>
 <body>
   <header class="site-header">
@@ -19,16 +19,25 @@
         <button type="button" class="nav" data-view="saved">Saved <span id="saved-count"></span></button>
         <button type="button" class="nav" data-view="courses">Courses</button>
       </nav>
-      <label class="search" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search oyster bars, redfish, tides..." autocomplete="off"><span class="visually-hidden">Search videos</span></label>
+      <label class="search" for="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+        <input id="search" type="search" placeholder="Search fish, structure, tides, lures..." autocomplete="off">
+        <span class="visually-hidden">Search videos</span>
+      </label>
+      <button class="head-icon mobile-only" type="button" data-toggle-search aria-label="Show search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button>
+      <button class="head-icon mobile-only" type="button" data-toggle-menu aria-label="Show menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
     </div>
   </header>
-  <div class="status-strip"><div class="shell"><span>Learn more. Search less. Catch more.</span><span id="data-status" aria-live="polite">Loading lessons...</span></div></div>
   <div id="app"></div>
   <div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true">
-    <div class="modal" id="modal" tabindex="-1">
-      <div id="modal-body"></div>
-    </div>
+    <div class="modal" id="modal" tabindex="-1"><div id="modal-body"></div></div>
   </div>
-  <script src="app.js?v=next-1" defer></script>
+  <nav class="mobile-tabs" aria-label="Mobile WATCH navigation">
+    <button type="button" class="mobile-tab active" data-view="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m3 10 9-7 9 7v10h-7v-7h-4v7H3z"/></svg><span>Discover</span></button>
+    <button type="button" class="mobile-tab" data-view="browse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 8 6 4-6 4z"/></svg><span>All Videos</span></button>
+    <button type="button" class="mobile-tab" data-view="saved"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 3h14v18l-7-5-7 5z"/></svg><span>Saved</span></button>
+    <button type="button" class="mobile-tab" data-view="courses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m2 9 10-6 10 6-10 6zM5 11v6c4 3 10 3 14 0v-6"/></svg><span>Courses</span></button>
+  </nav>
+  <script src="app.js?v=design-approved-2" defer></script>
 </body>
 </html>

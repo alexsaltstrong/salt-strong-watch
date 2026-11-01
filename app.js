@@ -5,7 +5,7 @@
   const validUrl = (u) => { try { const x = new URL(u); return ['https:','http:'].includes(x.protocol) ? x.href : ''; } catch { return ''; } };
   const yt = (v) => v?.provider === 'youtube' && /^[a-zA-Z0-9_-]{11}$/.test(v.id) ? v.id : '';
   const dateText = (s) => s && /^\d{4}-\d\d-\d\d$/.test(s) ? new Date(`${s}T12:00:00`).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-  let items = [], view = 'home', query = '', category = 'All', selected = null, focusBeforeModal = null;
+  let items = [], view = 'home', query = '', category = 'All', selected = null, focusBeforeModal = null, heroIndex = 0, showAllTopics = false, mobileMenuOpen = false, mobileSearchOpen = false;
   let saved = new Set(); try { saved = new Set(JSON.parse(localStorage.getItem('ss_watch_saved') || '[]').map(String)); } catch {}
   const builtinTopics = ['All','Redfish','Snook','Seatrout','Flounder','Tides','Oyster Bars','Marshes','Structure','Topwater','Paddletails','Rigging','Gear Tests'];
   const image = (it) => {
@@ -25,24 +25,73 @@
     [...counts].sort((a,b)=>b[1]-a[1]).forEach(([t])=>{if(!list.includes(t)&&list.length<27)list.push(t)});
     return list;
   };
-  function chipBar(){return `<div class="chips">${tagsInCatalog().map(t=>`<button type="button" class="chip ${category===t?'active':''}" data-tag="${esc(t)}" aria-pressed="${category===t}">${esc(t)}</button>`).join('')}</div>`;}
-  function card(it){
-    const yes = saved.has(String(it.id));
-    return `<article class="video-card"><button type="button" class="poster" data-open="${esc(it.id)}" aria-label="Watch ${esc(it.title)}">${image(it)}<span class="play" aria-hidden="true">▶</span><span class="cardbadge">${esc((it.tags||[])[0]||'Fishing Tips')}</span></button><div class="card-body"><button type="button" class="card-title" data-open="${esc(it.id)}">${esc(it.title)}</button><div class="cardline"><span>${esc(it.author||'Salt Strong')} · ${esc(dateText(it.date))}</span><button type="button" class="savebtn ${yes?'saved':''}" data-save="${esc(it.id)}" aria-label="${yes?'Remove saved':'Save'}: ${esc(it.title)}" aria-pressed="${yes}">${yes?'♥':'♡'}</button></div></div></article>`;
+  function chipBar(){
+    const list = tagsInCatalog();
+    const shortList = showAllTopics ? list : list.slice(0,12);
+    return `<div class="topic-controls"><div class="chips" role="group" aria-label="Fishing topics">${shortList.map(t=>`<button type="button" class="chip ${category===t?'active':''}" data-tag="${esc(t)}" aria-pressed="${category===t}">${esc(t)}</button>`).join('')}</div>${list.length>12?`<button class="chip more-topics" type="button" data-more-topics aria-expanded="${showAllTopics}">${showAllTopics?'Show fewer':'More topics'} <span aria-hidden="true">${showAllTopics?'−':'+'}</span></button>`:''}</div>`;
   }
-  function reel(title,subtitle,list){if(!list.length)return '';return `<section class="section"><div class="sectionhead"><div><h2>${esc(title)}</h2><p>${esc(subtitle)}</p></div><button class="more" type="button" data-view="browse">Explore all →</button></div><div class="reel">${list.slice(0,22).map(card).join('')}</div></section>`}
+  function card(it){
+    const yes=saved.has(String(it.id));
+    return `<article class="video-card"><button type="button" class="poster" data-open="${esc(it.id)}" aria-label="Watch ${esc(it.title)}">${image(it)}<span class="play" aria-hidden="true">▶</span><span class="cardbadge">${esc((it.tags||[])[0]||'Fishing Tips')}</span></button><div class="card-body"><button type="button" class="card-title" data-open="${esc(it.id)}">${esc(it.title)}</button><div class="cardline"><span>${esc(it.author||'Salt Strong')}${dateText(it.date)?` · ${esc(dateText(it.date))}`:''}</span><button type="button" class="savebtn ${yes?'saved':''}" data-save="${esc(it.id)}" aria-label="${yes?'Remove saved':'Save'}: ${esc(it.title)}" aria-pressed="${yes}">${yes?'♥':'♡'}</button></div></div></article>`;
+  }
+  function reel(title,subtitle,list){
+    if(!list.length)return '';
+    const id='reel-'+title.toLowerCase().replace(/[^a-z0-9]+/g,'-');
+    return `<section class="section" aria-label="${esc(title)}"><div class="sectionhead"><div><h2>${esc(title)}</h2><p>${esc(subtitle)}</p></div><button class="more" type="button" data-view="browse">Explore all <span aria-hidden="true">→</span></button></div><div class="reel-wrap"><button type="button" class="reel-arrow prev" data-scroll="${esc(id)}" data-dir="-1" aria-label="Previous videos in ${esc(title)}">‹</button><div class="reel" id="${esc(id)}" tabindex="0" aria-label="Scroll videos in ${esc(title)}">${list.slice(0,22).map(card).join('')}</div><button type="button" class="reel-arrow next" data-scroll="${esc(id)}" data-dir="1" aria-label="More videos in ${esc(title)}">›</button></div></section>`;
+  }
+  function heroSection(newest){
+    const slides=newest.slice(0,Math.min(5,newest.length));
+    if(!slides.length)return '';
+    heroIndex=((heroIndex%slides.length)+slides.length)%slides.length;
+    const it=slides[heroIndex];
+    return `<section class="hero" aria-label="Featured fishing lessons" id="featured-hero">
+      <div class="hero-image" aria-hidden="true">${image(it)}</div>
+      <div class="hero-shade"></div>
+      <div class="shell hero-content">
+        <div class="hero-copy"><div class="eyebrow">Latest lessons <span class="hero-mini-index">${heroIndex+1} / ${slides.length}</span></div><h1>${esc(it.title)}</h1><p>${esc(it.excerpt||'Real on-the-water tips to help you catch more fish.')}</p><div class="hero-actions"><button type="button" class="btn primary" data-open="${esc(it.id)}"><span aria-hidden="true">▶</span> Watch now</button><button type="button" class="btn ghost" data-related="${esc((it.tags||[])[0]||'All')}">More like this</button></div></div>
+      </div>
+      ${slides.length>1?`<button class="hero-arrow left" type="button" data-hero="prev" aria-label="Previous featured lesson">‹</button><button class="hero-arrow right" type="button" data-hero="next" aria-label="Next featured lesson">›</button><div class="hero-dots" role="group" aria-label="Featured lesson selection">${slides.map((_,i)=>`<button class="hero-dot ${i===heroIndex?'current':''}" type="button" data-hero-index="${i}" aria-label="Featured lesson ${i+1}" aria-pressed="${i===heroIndex}"></button>`).join('')}</div>`:''}
+    </section>`;
+  }
+  function collectionTiles(newest){
+    const defs=[
+      ['Redfish essentials',['Redfish'],'redfish'],
+      ['Oyster bar strategies',['Oyster Bars','Structure'],'oyster'],
+      ['Lure strategies',['Lures','Artificial Lures','Topwater','Paddletails'],'lure'],
+      ['Marsh fishing',['Marshes','Structure','Creek Mouths'],'marsh']
+    ];
+    const cards=defs.map(([title,topics,term])=>{
+      const matching=newest.filter(i=>(i.tags||[]).some(t=>topics.includes(t)) || (i.title+' '+i.search_text).toLowerCase().includes(term));
+      const sample=matching[0]||newest[0];if(!sample)return '';
+      return `<button type="button" class="collection-card" data-collection="${esc(topics[0])}" aria-label="Explore ${esc(title)} lessons">${image(sample)}<span class="collection-gradient" aria-hidden="true"></span><span class="collection-title">${esc(title)}</span><span class="collection-arrow" aria-hidden="true">→</span></button>`;
+    });
+    return `<section class="section collections-section"><div class="sectionhead"><div><h2>Popular collections</h2><p>Find the fishing lessons that match your next goal.</p></div><button class="more" type="button" data-view="browse">Explore collections →</button></div><div class="collections">${cards.join('')}</div></section>`;
+  }
   function home(){
-    const newest=sorted(items);const hero=newest[0];
-    if(!hero)return `<main class="shell"><div class="empty"><strong>No videos available yet.</strong>Import the newest 100 public articles using GitHub Actions.</div></main>`;
-    const around=(topics)=>newest.filter(i=>(i.tags||[]).some(t=>topics.includes(t)));
-    return `<section class="hero"><div class="shell hero-content"><div class="eyebrow">Salt Strong WATCH · Fishing education, simplified</div><h1>All the fishing know-how.<br><em>One place.</em></h1><p>Find what you need to catch more fish. Browse the latest lessons or search by species, structure, tides and tackle.</p><div class="hero-actions"><button class="btn primary" data-open="${esc(hero.id)}">▶ Watch the latest lesson</button><button class="btn outline" data-view="browse">Browse all videos →</button></div><div class="headline-lesson">Latest lesson: ${esc(hero.title)}</div></div></section><main class="shell"><section class="chooser"><div class="sectionhead"><div><h2>What do you want to learn?</h2><p>Browse a topic or search for something specific.</p></div></div>${chipBar()}</section>${reel('Fresh from the water','The newest public Salt Strong video lessons.',newest)}${reel('Find fish faster','Tides, structure, oyster bars, current and high-water patterns.',around(['Structure','Tides','Oyster Bars','Marshes','High Water']))}${reel('Tackle and techniques','Artificial lures, rigging, experiments and tackle tests.',around(['Topwater','Paddletails','Lures','Rigging','Gear Tests','Jigheads']))}<section class="feature-banner"><div><div class="eyebrow" style="color:#ffb58f">More ways to learn</div><h2>Go deeper with Salt Strong courses</h2><p>Browse structured lessons and existing course options.</p></div><button class="btn outline" data-view="courses">Explore courses</button></section><section class="section"><div class="sectionhead"><div><h2>Learn from your favorite coach</h2><p>Find videos from Luke, Pat and Tony.</p></div></div><div class="coach-row">${['Luke Simonds','Pat Ogletree','Tony Acevedo'].map(name=>`<button class="coach" data-coach="${esc(name)}">${esc(name)}<span>${items.filter(it=>it.author===name).length} lessons →</span></button>`).join('')}</div></section></main>`;
+    const newest=sorted(items);
+    if(!newest.length)return `<main class="shell"><div class="empty"><strong>No videos available yet.</strong>Import the newest public articles using GitHub Actions.</div></main>`;
+    return `${heroSection(newest)}<main class="shell">
+      <section class="chooser" aria-label="Browse fishing topics"><div class="chooser-heading"><h2>What do you want to<br>master on the water?</h2><span class="orange-swoosh" aria-hidden="true"></span></div>${chipBar()}</section>
+      ${reel('New on WATCH','The latest fishing lessons, tips, and on-the-water reports.',newest)}
+      ${collectionTiles(newest)}
+      <section class="feature-banner"><div class="course-banner-icon" aria-hidden="true">✦</div><div class="feature-copy"><div class="eyebrow">Go deeper</div><h2>Go deeper with Salt Strong courses</h2><p>Step-by-step lessons to build your skills and catch more fish.</p></div><button class="btn outline" type="button" data-view="courses">Explore courses →</button></section>
+
+    </main>`;
   }
   function browse(){const list=sorted(items.filter(matches));return `<main class="shell"><div class="browse-intro"><div class="eyebrow">Find the lesson you need</div><h1>${query?'Search results':'All fishing videos'}</h1><p>Filter by species, structure, conditions and tackle. Tags are generated from the articles, not just existing WordPress labels.</p></div><section class="section">${chipBar()}<div class="resultsbar"><span><strong>${list.length}</strong> video${list.length===1?'':'s'} found</span><span>Newest first</span></div>${list.length?`<div class="gridcards">${list.map(card).join('')}</div>`:`<div class="empty"><strong>No matches this time.</strong>Try a different search or category.<br><button class="btn light" data-reset="1">Clear search and filters</button></div>`}</section></main>`}
   function savedPage(){const list=sorted(items.filter(it=>saved.has(String(it.id))&&matches(it)));return `<main class="shell"><div class="browse-intro"><div class="eyebrow">Your fishing shortlist</div><h1>Saved videos</h1><p>Favorites are stored in this browser for the prototype. Cross-device WordPress account sync is a future integration.</p></div><section class="section">${chipBar()}<div class="resultsbar">${list.length} saved lesson${list.length===1?'':'s'}</div>${list.length?`<div class="gridcards">${list.map(card).join('')}</div>`:`<div class="empty"><strong>Nothing saved yet.</strong>Click the heart beside any video to keep it handy.<br><button class="btn light" data-view="browse">Find videos →</button></div>`}</section></main>`}
   function courses(){return `<main class="shell"><div class="browse-intro"><div class="eyebrow">Learn at your pace</div><h1>Salt Strong courses</h1><p>A discovery preview for existing premium courses. Actual Insider, VIP and purchase access will need the WordPress/Memberium integration.</p></div><section class="section"><div class="courses-list"><div class="course-card"><div class="eyebrow">Future course integration</div><h3>Structured fishing lessons</h3><p>Continue learning after watching a free fishing tip. Course recommendations will link to verified purchase pages.</p><a class="btn light" href="https://www.saltstrong.com/my-courses/" target="_blank" rel="noopener noreferrer">See current courses ↗</a></div><div class="course-card"><div class="eyebrow">Member-aware in the future</div><h3>Insider & VIP access</h3><p>WATCH will never grant course access based on a tag or a thumbnail. Current permissions will come from WordPress.</p><button class="btn light" data-view="browse">Explore public lessons →</button></div></div></section></main>`}
   function hydrateImages(root){root.querySelectorAll('img[data-backup]').forEach(img=>{img.addEventListener('error',()=>{const backup=img.dataset.backup;if(backup&&img.src!==backup){img.dataset.backup='';img.src=backup;}else{img.onerror=null;img.src='./assets/thumbnail-fallback.svg';}});});}
-  function render(){const main=$('#app');main.innerHTML=({home,browse,saved:savedPage,courses}[view]||home)()+`<footer class="site-footer"><div class="shell"><span>Salt Strong WATCH · Public article library prototype</span><a href="https://www.saltstrong.com/fishing-tips/" target="_blank" rel="noopener noreferrer">Original Salt Strong articles ↗</a></div></footer>`;hydrateImages(main);$('#saved-count').textContent=saved.size?`(${saved.size})`:'';document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===view));}
-  function switchView(name){view=name;render();window.scrollTo({top:0,behavior:'instant'});}
+  function render(){
+    const main=$('#app');
+    main.innerHTML=({home,browse,saved:savedPage,courses}[view]||home)()+`<footer class="site-footer"><div class="shell"><span>Salt Strong WATCH · Public fishing video library</span><a href="https://www.saltstrong.com/fishing-tips/" target="_blank" rel="noopener noreferrer">Original Salt Strong articles ↗</a></div></footer>`;
+    hydrateImages(main);
+    const count=$('#saved-count');if(count)count.textContent=saved.size?`(${saved.size})`:'';
+    document.querySelectorAll('.nav, .mobile-tab').forEach(n=>{n.classList.toggle('active',n.dataset.view===view);n.setAttribute('aria-current',n.dataset.view===view?'page':'false');});
+    document.body.classList.toggle('mobile-menu-open',mobileMenuOpen);
+    document.body.classList.toggle('mobile-search-open',mobileSearchOpen);
+  }
+  function switchView(name){view=name;mobileMenuOpen=false;render();window.scrollTo({top:0,behavior:'instant'});}
   function toggleSave(id){id=String(id);if(saved.has(id))saved.delete(id);else saved.add(id);try{localStorage.setItem('ss_watch_saved',JSON.stringify([...saved]));}catch{}if(selected&&String(selected.id)===id)openModal(selected,false);render();}
   function openModal(it,saveFocus=true){
     if(saveFocus)focusBeforeModal=document.activeElement;selected=it;
@@ -52,8 +101,14 @@
   }
   function closeModal(){const overlay=$('#overlay');if(!overlay.classList.contains('open'))return;overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true');$('#modal-body').replaceChildren();selected=null;document.body.style.overflow='';focusBeforeModal?.focus?.();}
   document.addEventListener('click',ev=>{
-    const el=ev.target.closest('[data-open],[data-view],[data-tag],[data-save],[data-close],[data-play],[data-coach],[data-reset]');
+    const el=ev.target.closest('[data-open],[data-view],[data-tag],[data-save],[data-close],[data-play],[data-coach],[data-reset],[data-hero],[data-hero-index],[data-related],[data-collection],[data-scroll],[data-more-topics],[data-toggle-search],[data-toggle-menu]');
     if(!el){if(ev.target.id==='overlay')closeModal();return;}
+    if(el.hasAttribute('data-toggle-search')){mobileSearchOpen=!mobileSearchOpen;render();if(mobileSearchOpen)$('#search').focus();return;}
+    if(el.hasAttribute('data-toggle-menu')){mobileMenuOpen=!mobileMenuOpen;render();return;}
+    if(el.hasAttribute('data-hero')||el.hasAttribute('data-hero-index')){const n=Math.min(5,items.length);heroIndex=el.hasAttribute('data-hero-index')?Number(el.dataset.heroIndex):(heroIndex+(el.dataset.hero==='next'?1:-1)+n)%n;render();return;}
+    if(el.dataset.related||el.dataset.collection){const target=el.dataset.related||el.dataset.collection;category=target;query='';$('#search').value='';switchView('browse');return;}
+    if(el.hasAttribute('data-more-topics')){showAllTopics=!showAllTopics;render();return;}
+    if(el.hasAttribute('data-scroll')){const x=document.getElementById(el.dataset.scroll);if(x)x.scrollBy({left:Number(el.dataset.dir)*Math.max(270,x.clientWidth*.83),behavior:'smooth'});return;}
     if(el.dataset.open){const it=items.find(x=>String(x.id)===el.dataset.open);if(it)openModal(it);return;}
     if(el.hasAttribute('data-close')){closeModal();return;}
     if(el.hasAttribute('data-play')){if(!selected)return;const id=yt(selected.video);if(!id)return;const f=document.createElement('iframe');f.title=`YouTube player: ${selected.title}`;f.src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0`;f.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';f.allowFullscreen=true;f.referrerPolicy='strict-origin-when-cross-origin';$('#modal-body .player').replaceChildren(f);return;}
@@ -64,11 +119,12 @@
     if(el.dataset.view){if(el.dataset.view==='home'){category='All';query='';$('#search').value='';}switchView(el.dataset.view);return;}
   });
   $('#search').addEventListener('input',e=>{query=e.target.value;category='All';view='browse';render();});
+  let heroTouchX=null;document.addEventListener('touchstart',e=>{if(e.target.closest('#featured-hero'))heroTouchX=e.changedTouches[0]?.screenX??null;},{passive:true});document.addEventListener('touchend',e=>{if(heroTouchX==null||!e.target.closest('#featured-hero'))return;const diff=(e.changedTouches[0]?.screenX??heroTouchX)-heroTouchX;heroTouchX=null;if(Math.abs(diff)>65){const n=Math.min(5,items.length);heroIndex=(heroIndex+(diff<0?1:-1)+n)%n;render();}},{passive:true});
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
-  async function init(){let data=null;let isSample=false;try{const r=await fetch('./catalog.json',{cache:'no-store'});if(r.ok)data=await r.json();}catch{}if(!data){try{const r=await fetch('./catalog.sample.json',{cache:'no-store'});if(r.ok){data=await r.json();isSample=true;}}catch{}}if(!data){$('#data-status').textContent='Catalog unavailable';return;}
+  async function init(){let data=null;let isSample=false;try{const r=await fetch('./catalog.json',{cache:'no-store'});if(r.ok)data=await r.json();}catch{}if(!data){try{const r=await fetch('./catalog.sample.json',{cache:'no-store'});if(r.ok){data=await r.json();isSample=true;}}catch{}}if(!data){console.warn('WATCH catalog unavailable');return;}
     items=(data.items||[]).filter(x=>x.id&&x.title&&validUrl(x.url)&&yt(x.video));
     // A real catalog may still include legacy, unresolved records. They must not appear as playable videos.
-    items=sorted(items);$('#data-status').textContent=`${items.length} playable videos${isSample?' · sample catalog':''}`;render();
+    items=sorted(items);console.info(`WATCH: ${items.length} playable videos${isSample?' (sample catalog)':''}`);render();
   }
   init();
 })();
