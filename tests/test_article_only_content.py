@@ -93,8 +93,8 @@ class ArticleOnlyContentTests(unittest.TestCase):
     def test_new_search_is_phrase_first(self):
         js = (ROOT/'app.js').read_text(encoding='utf8')
         self.assertIn('const searchScore =', js)
-        self.assertIn('const count = body.split(terms).length - 1', js)
-        self.assertIn("count >= 2 || (count === 1 && body.indexOf(terms) < 900)", js)
+        self.assertIn('const WatchSearch =', js)
+        self.assertIn('No sufficiently relevant match', js)
         self.assertIn('searchScore(b)-searchScore(a)', js)
 
 

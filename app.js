@@ -1,3 +1,122 @@
+/* WATCH Search Relevance V2: deliberately weighted and testable. */
+const WatchSearch = (() => {
+  'use strict';
+  function normalize(value) {
+    return String(value ?? '')
+      .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ')
+      .trim().replace(/\s+/g, ' ');
+  }
+  const bounded = value => ` ${value} `;
+  function hasPhrase(haystack, phrase) {
+    return Boolean(haystack && phrase && bounded(haystack).includes(` ${phrase} `));
+  }
+  function countPhrase(haystack, phrase) {
+    if (!haystack || !phrase) return 0;
+    let count = 0, from = 0;
+    const all = bounded(haystack), needle = ` ${phrase} `;
+    while ((from = all.indexOf(needle, from)) !== -1) { count++; from += needle.length - 1; }
+    return count;
+  }
+  // Avoid generic fishing words driving results for focused queries.
+  // Do not remove the only meaningful word in a query.
+  const stop = new Set([
+    'the','a','an','and','or','of','to','in','on','at','for','from','with','about',
+    'around','under','over','near','using','use','how','where','why','when','do','i',
+    'can','my','your','you','best','easy','way','tips','tip','video','videos','lesson',
+    'lessons','fishing','fish','saltwater','inshore','catch','find','during'
+  ]);
+  // Explicit, conservative fishing synonyms. These apply to *high-signal*
+  // fields only. A passing word in article body never activates a synonym.
+  const concepts = [
+    {terms:['night fishing','fishing at night','nighttime fishing','night bite','after dark','dock lights','night'], aliases:['night fishing','nighttime','night','after dark','dock lights','night bite','fishing at night']},
+    {terms:['soft plastics','soft plastic'], aliases:['soft plastics','soft plastic','paddletails','paddletail','jerk shad','jerk shads','artificial shrimp']},
+    {terms:['high water','high tide'], aliases:['high water','high tide','flooded grass','flooded shoreline','flooded shorelines']},
+    {terms:['redfish','red drum'], aliases:['redfish','red drum']},
+    {terms:['oyster bars','oyster bar'], aliases:['oyster bars','oyster bar','oyster reefs','oyster reef']},
+    {terms:['paddletails','paddletail'], aliases:['paddletails','paddletail','paddle tail','paddle tails']}
+  ];
+  function wordVariants(token) {
+    const a = [token];
+    if (token.length > 4 && token.endsWith('ies')) a.push(token.slice(0, -3) + 'y');
+    else if (token.length > 4 && token.endsWith('s') && !token.endsWith('ss')) a.push(token.slice(0, -1));
+    if (token.length > 4 && !token.endsWith('s')) a.push(token + 's');
+    return [...new Set(a)];
+  }
+  function parseQuery(input) {
+    const text = normalize(input);
+    if (!text) return {text:'', groups:[], exact:''};
+    const concept = concepts.find(c => c.terms.includes(text));
+    if (concept) return {text, groups:[{term:text, aliases:concept.aliases.map(normalize)}], exact:text};
+    let tokens = text.split(' ');
+    const relevant = tokens.filter(t => !stop.has(t));
+    if (relevant.length) tokens = relevant;
+    // Long queries are all-concepts searches, not "match any random word".
+    const groups = [...new Set(tokens)].map(t => ({term:t,aliases:wordVariants(t)}));
+    return {text, groups, exact:text};
+  }
+  function compile(item, visibleTags) {
+    return {
+      title:normalize(item.title),
+      tags:normalize((visibleTags ?? item.tags ?? []).join(' ')),
+      headings:normalize(item.content_headings),
+      summary:normalize(item.excerpt),
+      keywords:normalize((item.search_terms ?? []).join(' ')),
+      body:normalize(item.search_text)
+    };
+  }
+  const highFields = [['title',100],['tags',95],['headings',70],['summary',52]];
+  function evidence(doc, aliases) {
+    for (const [field,weight] of highFields) {
+      for (const phrase of aliases) {
+        if (hasPhrase(doc[field], phrase)) return {field, weight, phrase};
+      }
+    }
+    return null;
+  }
+  function evaluate(doc, input) {
+    const query = typeof input === 'string' ? parseQuery(input) : input;
+    if (!query || !query.groups.length) return {score:1, reason:'Newest videos'};
+    const hits = query.groups.map(group => evidence(doc,group.aliases));
+    const matched = hits.filter(Boolean);
+    // Single words must be central to the video, not a passing body mention.
+    // Multiword queries require every significant concept, not OR-matching.
+    if (matched.length === hits.length) {
+      // Common filler words in a single excerpt sentence are not lesson topics.
+      // A title, approved topic, or heading still qualifies such a query.
+      const weakSingles = new Set(['day','days','today','search','searching','time','times','new','more','thing','things']);
+      if (hits.length === 1 && matched[0].field === 'summary' && weakSingles.has(query.groups[0].term)) {
+        return {score:0,reason:'Incidental summary wording'};
+      }
+      // "night fishing" should not match a random mention that a lure
+      // happens to work at night. A summary-only result needs an explicit
+      // nighttime technique phrase, not merely the word night.
+      const nightTopic = ['night','night fishing','fishing at night','nighttime fishing','night bite','after dark','dock lights'].includes(query.text);
+      if (nightTopic && hits.length === 1 && matched[0].field === 'summary' &&
+          !['night fishing','fishing at night','night bite','dock lights','after dark','nighttime fishing'].some(term => hasPhrase(doc.summary,term))) {
+        return {score:0,reason:'Passing nighttime mention in summary'};
+      }
+      let score = matched.reduce((sum,hit) => sum + hit.weight,0) / hits.length;
+      const fields = [['title',60],['tags',50],['headings',35],['summary',24]];
+      const phrase = fields.find(([field]) => hasPhrase(doc[field],query.exact));
+      if (phrase) score += phrase[1];
+      // Search terms may boost a *supported* result, never create one.
+      if (hasPhrase(doc.keywords,query.exact)) score += 8;
+      const unique = [...new Set(matched.map(hit => hit.field))];
+      return {score:Math.round(score), reason:`Matched ${unique.join(' + ')}${phrase ? ' (exact phrase)' : ''}`};
+    }
+    // Full article text is searchable, but a phrase must clearly recur.
+    // Never use this fallback for one-word queries or "night fishing"/other
+    // single-concept synonyms where incidental mentions are notorious.
+    if (query.groups.length >= 2 && query.text.split(' ').length >= 2) {
+      const frequency = countPhrase(doc.body,query.exact);
+      if (frequency >= 3) return {score:28,reason:`Repeated in article body (${frequency} mentions)`};
+    }
+    return {score:0,reason:'No sufficiently relevant match'};
+  }
+  return Object.freeze({normalize, hasPhrase, countPhrase, parseQuery, compile, evaluate});
+})();
+
 (() => {
   'use strict';
   const $ = (s) => document.querySelector(s);
@@ -45,28 +164,19 @@
     }
     return url;
   };
-  // Search index contains ONLY the edited article body after a clean resync.
-  // Multiword queries prioritize real phrases instead of matching unrelated
-  // words scattered through a long article (e.g. "night" + "fishing").
-  const searchScore = (it) => {
-    const terms = query.trim().toLowerCase().replace(/\s+/g, ' ');
-    if(!terms) return 1;
-    const title = String(it.title || '').toLowerCase();
-    const tags = publicTags(it).join(' ').toLowerCase();
-    const summary = String(it.excerpt || '').toLowerCase();
-    const headings = String(it.content_headings || '').toLowerCase();
-    const keywords = (it.search_terms||[]).join(' ').toLowerCase();
-    const body = String(it.search_text || '').toLowerCase();
-    const fields = [[title,100],[tags,90],[headings,85],[summary,75],[keywords,65]];
-    for (const [text,score] of fields) if (text.includes(terms)) return score;
-    if (terms.includes(' ')) {
-      // A phrase mentioned once far down an article is probably incidental.
-      const count = body.split(terms).length - 1;
-      return count >= 2 || (count === 1 && body.indexOf(terms) < 900) ? 25 : 0;
+  // Search V2: content is indexed once. Search uses title, reviewed tags,
+  // article headings and the author summary as primary relevance signals.
+  // Full article text can only qualify a repeated, exact multiword phrase.
+  const searchDocuments = new Map();
+  const searchHit = (it) => {
+    let document = searchDocuments.get(String(it.id));
+    if (!document) {
+      document = WatchSearch.compile(it, publicTags(it));
+      searchDocuments.set(String(it.id), document);
     }
-    // Single-term searches can still explore the complete article body.
-    return body.includes(terms) ? 10 : 0;
+    return WatchSearch.evaluate(document, query);
   };
+  const searchScore = (it) => searchHit(it).score;
   const matches = (it) =>
     (category === 'All' || publicTags(it).includes(category)) && searchScore(it) > 0;
   const sorted = (arr) => [...arr].sort((a,b) => String(b.date || '').localeCompare(String(a.date || '')));
@@ -149,7 +259,11 @@
 
     </main>`;
   }
-  function browse(){const list=items.filter(matches).sort((a,b) => query.trim() ? (searchScore(b)-searchScore(a) || String(b.date||'').localeCompare(String(a.date||''))) : String(b.date||'').localeCompare(String(a.date||'')));return `<main class="shell"><div class="browse-intro"><div class="eyebrow">Find the lesson you need</div><h1>${query?'Search results':'All fishing videos'}</h1><p>Filter by species, structure, conditions and tackle. Tags are generated from the articles, not just existing WordPress labels.</p></div><section class="section">${chipBar()}<div class="resultsbar"><span><strong>${list.length}</strong> video${list.length===1?'':'s'} found</span><span>${query.trim()?'Best match':'Newest first'}</span></div>${list.length?`<div class="gridcards">${list.map(card).join('')}</div>`:`<div class="empty"><strong>No matches this time.</strong>Try a different search or category.<br><button class="btn light" data-reset="1">Clear search and filters</button></div>`}</section></main>`}
+  function browse(){const list=items.filter(matches).sort((a,b) => query.trim() ? (searchScore(b)-searchScore(a) || String(b.date||'').localeCompare(String(a.date||''))) : String(b.date||'').localeCompare(String(a.date||'')));
+    if (query.trim() && new URLSearchParams(window.location.search).has('watch_search_debug')) {
+      console.table(list.map(it => ({title:it.title, score:searchScore(it), why:searchHit(it).reason})));
+    }
+    return `<main class="shell"><div class="browse-intro"><div class="eyebrow">Find the lesson you need</div><h1>${query?'Search results':'All fishing videos'}</h1><p>Filter by species, structure, conditions and tackle. Tags are generated from the articles, not just existing WordPress labels.</p></div><section class="section">${chipBar()}<div class="resultsbar"><span><strong>${list.length}</strong> video${list.length===1?'':'s'} found</span><span>${query.trim()?'Best match':'Newest first'}</span></div>${list.length?`<div class="gridcards">${list.map(card).join('')}</div>`:`<div class="empty"><strong>No matches this time.</strong>Try a different search or category.<br><button class="btn light" data-reset="1">Clear search and filters</button></div>`}</section></main>`}
   function savedPage(){const list=sorted(items.filter(it=>saved.has(String(it.id))&&matches(it)));return `<main class="shell"><div class="browse-intro"><div class="eyebrow">Your fishing shortlist</div><h1>Saved videos</h1><p>Favorites are stored in this browser for the prototype. Cross-device WordPress account sync is a future integration.</p></div><section class="section">${chipBar()}<div class="resultsbar">${list.length} saved lesson${list.length===1?'':'s'}</div>${list.length?`<div class="gridcards">${list.map(card).join('')}</div>`:`<div class="empty"><strong>Nothing saved yet.</strong>Click the heart beside any video to keep it handy.<br><button class="btn light" data-view="browse">Find videos →</button></div>`}</section></main>`}
   function courses(){return `<main class="shell"><div class="browse-intro"><div class="eyebrow">Learn at your pace</div><h1>Salt Strong courses</h1><p>A discovery preview for existing premium courses. Actual Insider, VIP and purchase access will need the WordPress/Memberium integration.</p></div><section class="section"><div class="courses-list"><div class="course-card"><div class="eyebrow">Future course integration</div><h3>Structured fishing lessons</h3><p>Continue learning after watching a free fishing tip. Course recommendations will link to verified purchase pages.</p><a class="btn light" href="https://www.saltstrong.com/courses/" target="_blank" rel="noopener noreferrer">See current courses ↗</a></div><div class="course-card"><div class="eyebrow">Member-aware in the future</div><h3>Insider & VIP access</h3><p>WATCH will never grant course access based on a tag or a thumbnail. Current permissions will come from WordPress.</p><button class="btn light" data-view="browse">Explore public lessons →</button></div></div></section></main>`}
   function hydrateImages(root){
@@ -230,7 +344,7 @@
   async function init(){let data=null;let isSample=false;try{const r=await fetch('./catalog.json',{cache:'no-store'});if(r.ok)data=await r.json();}catch{}if(!data){try{const r=await fetch('./catalog.sample.json',{cache:'no-store'});if(r.ok){data=await r.json();isSample=true;}}catch{}}if(!data){console.warn('WATCH catalog unavailable');return;}
     items=(data.items||[]).filter(x=>x.id&&x.title&&validUrl(x.url)&&yt(x.video));
     // A real catalog may still include legacy, unresolved records. They must not appear as playable videos.
-    items=sorted(items);console.info(`WATCH: ${items.length} playable videos${isSample?' (sample catalog)':''}`);render();
+    items=sorted(items);searchDocuments.clear();console.info(`WATCH: ${items.length} playable videos${isSample?' (sample catalog)':''}`);render();
   }
   init();
 })();
