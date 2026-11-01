@@ -182,7 +182,7 @@ def run(args):
                                 warnings.append(f'Rendered metadata unavailable: {str(exc)[:100]}')
                     if item:
                         item['video']=video
-                        item['image']=f'https://i.ytimg.com/vi/{video["id"]}/hqdefault.jpg'
+                        item['image']=f'https://i.ytimg.com/vi/{video["id"]}/maxresdefault.jpg'
                         item['video_source']=method
                         item['needs_review']=bool(warnings) or item.get('needs_review',False)
                         reason=''
@@ -200,7 +200,8 @@ def run(args):
             status='skipped'
             counts[reason or 'unknown']+=1
         audit.append({'article':url,'status':status,'reason':reason,'video':video,
-                      'method':method,'warnings':warnings,'title':item.get('title') if item else None})
+                      'method':method,'warnings':warnings,'title':item.get('title') if item else None,
+                      'featured_gear_count':len(item.get('gear') or []) if item else 0})
         print(f'[{idx}/{len(urls)}] {status.upper():8} {url} '+(f'YT={video["id"]}' if video else reason),flush=True)
         time.sleep(max(0,args.delay))
 

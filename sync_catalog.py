@@ -213,36 +213,68 @@ def get_author(soup):
 
 
 def extract_gear(soup):
-    """Collect real product links from article content; do not fabricate links.
+    """Extract every relevant linked item from an article's Featured Gear block.
 
-    Keep article order and URLs (including existing tracking redirects). Exclude
-    nav/footer/sidebar, unrelated articles, and broad shop homepages.
+    First find the section explicitly headed "Featured Gear". Its list may be
+    nested in divs or WordPress columns. Only if no section exists, fall back
+    to product links in the article body. Preserve original SSO URLs VERBATIM.
     """
-    node = content_node(soup)
-    results=[]
-    seen=set()
-    for a in node.select('a[href]'):
-        href=urljoin(BASE,a.get('href',''))
-        p=urlparse(href)
-        host=(p.hostname or '').lower()
-        path=p.path.lower()
-        if not (host in ('fishstrong.com','www.fishstrong.com') or
-                (host in ('www.saltstrong.com','saltstrong.com') and ('shopify-sso' in path or '/shop/' in path))):
+    from bs4 import Tag
+    from urllib.parse import parse_qs
+    main = content_node(soup)
+    heading = None
+    for h in main.find_all(re.compile(r'^h[1-6]$')):
+        if re.search(r'\bfeatured\s+(?:gear|tackle)\b', h.get_text(' ', strip=True), re.I):
+            heading = h
+            break
+    anchor_candidates=[]
+    if heading:
+        # Iterate document order after the heading until next main section;
+        # don't stop at nested div/ul, or miss table/list link structures.
+        heading_level=int(heading.name[1])
+        for node in heading.next_elements:
+            if isinstance(node, Tag) and re.fullmatch(r'h[1-6]', node.name or ''):
+                if int(node.name[1]) <= heading_level:
+                    break
+            if isinstance(node, Tag) and node.name == 'a' and node.has_attr('href'):
+                anchor_candidates.append(node)
+    else:
+        anchor_candidates=main.select('a[href]')
+
+    def allowed(href):
+        parsed=urlparse(href)
+        host=(parsed.hostname or '').lower()
+        path=parsed.path.lower()
+        if host in ('fishstrong.com','www.fishstrong.com'):
+            return path.startswith(('/products/','/collections/','/pages/'))
+        if host in ('saltstrong.com','www.saltstrong.com') and path=='/shopify-sso/product.php':
+            target=parse_qs(parsed.query).get('shopurl',[''])[0]
+            t=urlparse(target)
+            return t.scheme in ('https','http') and (t.hostname or '').lower() in ('fishstrong.com','www.fishstrong.com')
+        return False
+
+    results=[]; seen=set()
+    for a in anchor_candidates:
+        href=urljoin(BASE,a['href']).strip()
+        if not allowed(href):
             continue
-        if host.endswith('fishstrong.com') and not (path.startswith('/products/') or path.startswith('/collections/') or path.startswith('/pages/')):
-            continue
-        # Skip generic nav links/empty or duplicate buttons.
-        img=a.find('img')
-        label=clip(a.get_text(' ',strip=True) or a.get('title','') or (img.get('alt','') if img else ''),115)
-        if not label or label.lower() in ('shop now','buy now','click here','get yours','learn more','view product'):
-            # Prefer product slug over a meaningless button label.
-            slug=(path.split('/products/')[-1] if '/products/' in path else '').split('/')[0].replace('-',' ')
-            label=slug.title() if slug else 'Featured gear'
-        key=href.split('#')[0]
-        if key not in seen:
-            seen.add(key)
-            results.append({'name':label,'url':href})
-        if len(results)>=12: break
+        # Duplicate product links may appear as images AND text. Prefer a useful
+        # descriptive anchor but don't infer unverified names or destinations.
+        label=clip(a.get_text(' ',strip=True) or a.get('title',''),150)
+        if not label:
+            im=a.find('img')
+            if im: label=clip(im.get('alt',''),150)
+        if not label or label.lower() in ('shop now','buy now','click here','get yours','learn more','view product','shop gear'):
+            # A row with a short linked label often uses the preceding 'Rod:' text.
+            if a.parent:
+                label=clip(a.parent.get_text(' ',strip=True),150)
+        if not label:
+            label='Featured gear'
+        # De-duplicate by destination; never change original SSO URLs.
+        key=href.split('#',1)[0]
+        if key in seen: continue
+        seen.add(key)
+        results.append({'name':label,'url':href})
     return results
 
 
@@ -278,7 +310,7 @@ def parse_article(url, content, raw_post_content=""):
     if not videos:return None,"no detectable YouTube/Vimeo embed"
     original_image = urljoin(BASE, image) if image else ""
     if videos[0]["provider"] == "youtube":
-        image = f'https://i.ytimg.com/vi/{videos[0]["id"]}/hqdefault.jpg'
+        image = f'https://i.ytimg.com/vi/{videos[0]["id"]}/maxresdefault.jpg'
     if not image: image = original_image  # Vimeo may lack accessible cover artwork.
     # The WATCH frontend has a bundled fallback when neither remote image works.
     return {
